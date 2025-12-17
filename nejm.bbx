@@ -1,0 +1,52 @@
+\ProvidesFile{nejm.bbx}[2021/07/09 v0.1 biblatex bibliography style]
+
+\RequireBibliographyStyle{numeric}
+
+\ExecuteBibliographyOptions{sorting=none, maxbibnames=6, minbibnames=3, doi=true, isbn=false, url=false, uniquename=false, uniquelist=false, giveninits=true, terseinits=true}
+
+\DeclareFieldFormat[article,inbook,incollection,inproceedings,patent,thesis,unpublished]{title}{{#1\isdot}}
+\renewbibmacro{in:}{}
+\DeclareFieldFormat{pages}{#1}
+\renewcommand*{\bibpagespunct}{\addcolon}
+
+\renewbibmacro*{journal+issuetitle}{%
+    \usebibmacro{journal}%
+    \setunit*{\addperiod\addspace}%
+    \iffieldundef{series}
+    {}
+    {\newunit
+        \printfield{series}%
+        \setunit{\addspace}}%
+    \usebibmacro{issue+date}%
+    \setunit{\addsemicolon\addspace}%
+    \printfield{volume}%
+    \iffieldundef{number}
+    {}
+    {\printtext{(\printfield{number})}}%
+    \setunit{\addcolon\space}%
+    \usebibmacro{issue}%
+    \newunit%
+}
+
+% Remove italics from article titles
+\DeclareFieldFormat{title}{#1}
+\DeclareFieldFormat{journaltitle}{#1}
+
+% Print only the year
+\renewbibmacro*{issue+date}{%
+    \printfield{year}%
+}
+
+% Remove "and" from list of authors
+\renewcommand*{\finalnamedelim}{\multinamedelim}
+
+% Bib list with num-dot format
+\DeclareFieldFormat{labelnumberwidth}{#1\adddot}
+\DeclareFieldFormat{shorthandwidth}{\mkbibparens{#1}}
+
+% DOI should be lowercase
+\DeclareFieldFormat{doi}{%
+  \mkbibacro{doi}\addcolon\space
+  \ifhyperref
+    {\href{https://doi.org/#1}{\nolinkurl{#1}}}
+    {\nolinkurl{#1}}}

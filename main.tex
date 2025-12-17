@@ -1,0 +1,175 @@
+% Use basic fonts such as Arial, Calibri, or Times New Roman at 11 points.
+\documentclass[11pt]{article}
+\input{rsnastyle}
+
+\addbibresource{sample_bibliography.bib}
+\addbibresource{xampl.bib}
+
+% For lorem ipsum only, can be removed
+\usepackage{mwe}
+\usepackage{blindtext}
+
+% Title of the manuscript (15 words) Include modality and disease. Be concise. If space allows, indicate study type (randomized clinical trial) and registry or clinical trial name (eg, MESA, DETERMINE)
+\title{Manuscript title}
+
+% Authors: This will not be used in this template as it only generates the Abbreviated Title Page (Anonymized)
+\author[1]{First A. Author, PhD}
+\author[2]{Second B. Author, MD}
+\author[1,3]{Third C. Author, MSc}
+\affil[1]{Department of X, Institution A, City, State, Country}
+\affil[2]{Department of Y, Institution B, City, State, Country}
+\affil[3]{Department of Z, Institution C, City, State, Country}
+
+\begin{document}
+
+\maketitle
+
+\textbf{Article type}: Original research
+
+% A summary statement (for Original Research and Technical Development papers) of no more than 30 words in boldface. This should be a single sentence that highlights the key finding in your study.
+\textbf{Summary statement}: TODO
+
+% Key Results, consisting of up to 3 main results/conclusions from your study (maximum: 75 words) including summary data. Do NOT repeat your summary statement. Key Results will translate directly to visual abstracts. Please avoid using vague language and abbreviations in the Key Results. Obvious abbreviations like CT and MRI are fine. Type “N/A” if your study has none.
+\textbf{Key results}:
+\begin{itemize}
+    \item TODO
+    \item TODO
+    \item TODO
+\end{itemize}
+
+% List of all abbreviations with spelled out words (no more than 10)
+\newacronym{MRI}{MRI}{Magnetic Resonance Imaging}
+\newacronym{CT}{CT}{Computed Tomography}
+
+\textbf{List of abbreviations}:
+\printglossary[
+  type=\acronymtype,
+  title={},      % empty title
+  toctitle={},   % avoid a ToC title
+  nonumberlist,  % suppress page list
+  nopostdot      % remove trailing do
+  ]
+
+
+\clearpage
+%Structured Abstract: Original Research and Technical Developments
+%
+%Original Research and Technical Developments manuscripts must include a structured abstract of 300 words or less divided into five sections.
+
+\section*{Abstract}
+
+% Background: Include 1-2 sentences stating why your study was performed and/or why it is relevant.
+Background: We will talk about \acrfull{MRI} or \acrshort{MRI}. \blindtext 
+
+% Purpose: In one to two sentences, succinctly state the study purpose.
+Purpose: \blindtext
+
+% Materials and Methods: (1) Identify as prospective or retrospective; (2) Date range of study; (3) If animal, study, provide number and type of animals; (4) Describe various groups, including controls; (5) Describe procedures performed; (6) Specifics of evaluation should parallel the results portion of the abstract; (7) Include one sentence on statistical analyses
+Materials and methods: \blindtext
+
+% Results: The first sentence should indicate the number, sex, and mean age ± standard deviation or median age and interquartile range (whole numbers only) of the study participants enrolled. For example, if there are 100 patients of 60 men and 40 women, then write 100 patients (mean age, 47 years +/- 10 [standard deviation]; 60 men) were evaluated. Provide sex of the larger number of patients. Then, provide the findings in parallel with the Methods and include indicators of statistical significance, actual numbers, and percentages. Report the numerator and denominator for all percentages. All p-values need corresponding comparison values. Include confidence intervals when appropriate.
+Results: \blindtext
+
+% Conclusion: Must derive directly from the results. Do not elaborate on the significance or other implications of your study. Must address the purpose of the study.
+Conclusions: \blindtext
+
+%\end{quote}
+
+
+\clearpage
+\section*{Introduction}
+\label{sec:intro}
+% No more than 400 words. Typically contains background information and references that inform the reader as to why the study was performed. No extensive literature review. Brevity and focus are important. In the final paragraph, state the hypothesis (for prospective studies only) and purpose. Your purpose should be essentially the same as in the abstract. Do not provide a hypothesis for retrospective studies, meta-analysis/systematic reviews, or technical development papers.
+\blindtext
+
+\section*{Materials and Methods}
+\label{sec:methods}
+%No more than 800 words. Include all items presented in the Results section.
+%
+%The Materials and Methods section should include:
+%    A clear statement of whether the study is retrospective or prospective. If main prospective study did not include your study purpose in original design, you may classify as a secondary analysis of a prospective trial.
+%    For prospective studies, enrolled patients become participants. Refer to them as such.
+%    Date range of the study.
+%    Sample selection: Describe inclusion and exclusion criteria, consecutive or random selection.
+%    Indicate how sample size was derived.
+%    Number, training, and expertise of persons executing and reading the index tests. State the number of years of experience of those who performed readings or evaluations. For resident readings, indicate “in-training.”
+%    Provide initials for any authors executing index tests or performing readings/evaluations. If those contributors are not authors, mention in acknowledgments but obtain written permission to do so.
+%    What was evaluated and how was evaluation performed? Mention anonymizing of data or images used in your analysis. Indicate if studies were read independently, if consensus agreements were used, and how disagreements were handled. Single observer studies are discouraged, as are “consensus” reads.
+%    Description of the pre-specified primary outcome measure(s), as well as secondary and other variables.
+%
+%For prospective and retrospective studies using human subjects, address in the first paragraph (1) Institutional review board (IRB) approval and patient informed consent. State if consent was obtained; (2) HIPAA compliance for U.S. studies; (3) Clinical Trials Registry Number and Registry Name. Mention whether all or part of your patient population was previously reported with citation of the appropriate reference(s). At the editor’s discretion, we may request a copy/ verification of IRB/ institutional review approval of your study prior to acceptance.
+%
+%For animal experiments, provide a statement of approval by the institutional animal care committee or appropriate substitute (see the Human and Animal Studies section). If the portion of the animals was previously reported, please indicated the reference.
+%
+%Describe clearly the number (if animals) and selection of the subjects studied (patients or experimental animals, including controls). Identify any utilized instruments or drugs (including contrast) with trade names, manufacturer’s name in parentheses. Describe procedures in sufficient detail to allow others to reproduce the study. It is essential to explain the manner in which studies were evaluated: independent readings, anonymized or unanonymized to other information, time sequencing between readings of several studies of the same subject to eliminate recall bias, random ordering of studies.
+%
+%Give references to established methods, including statistical methods that have been published but are not well known; describe new or substantially modified methods and give reasons for using these techniques.
+%
+%Last Paragraph: State the statistical methods used to analyze the data. Mention the statistical software used, along with version and manufacturer's name. State the p-value used for significance. If statistical analyst is an author, then provide initials. A statement of justification of sample size and/ or power calculation is strongly recommended.
+%
+%Radiology recommends that authors seek statistical consultation before planning a study to ensure appropriate enrollment and collection of data and the use of statistical tools. Similarly, discuss studies relating to cost analysis or cost-effectiveness with individuals knowledgeable in these techniques. Radiology reserves the right to have the raw data recalculated by our consultants, as needed. Background information on statistical analyses may be included in the Supplemental Materials when it is essential for understanding the study.
+\blindtext
+
+\begin{figure}[tbh!]
+\centering
+\includegraphics[width=0.8\linewidth]{example-image.pdf}
+\caption{Example Image.\label{fig:example}}
+\end{figure}
+
+\blindtext
+
+\section*{Results}
+\label{sec:results}
+% No more than 1000 words. The first paragraph should summarize the demographics of your study sample. At a minimum, indicate number of patients/participants, mean age ± standard deviation or median age and interquartile range, and number of men vs women. For manuscripts with human study participants, include a table of demographics/characteristics. This should be Table 1 of your paper. The first paragraph of Results should summarize and cite the table 1 demographics. Also, document the number of participants excluded for each exclusion criteria described in methods. Include a flow diagram as Figure 1 and cite in the Results, showing initial number of participants and those excluded for any reason.
+%
+%Present the results in logical sequence in the text, along with tables and illustrations. Summarize important observations with reference to appropriate tables and figures. Give results for all items mentioned in the Materials and Methods. Use Materials and Methods subheadings in the same sequence in the Results, as appropriate.
+%
+%State the statistical significance of the findings. Report the results of the statistical analyses for all variables collected and analyzed, not just for those which exhibited statistical or near statistical significance. Avoid hedge terms such as “trend” or “marginal” for results that are not statistically significant.
+%
+%Provide numerators and denominators for all percentages, including sensitivity, specificity, accuracy, positive predictive value, and negative predictive value. Regression coefficients or mean values of compared groups must be given along with p-values.
+%
+%P-values should be expressed to 2 digits to the right of the decimal point (regardless of whether the p-value is significant) unless p <.01 in which case the p-value should be expressed to 3 digits to the right of the decimal point. The exception to this rule is when rounding p from 3 digits to 2 digits would result in p appearing non-significant (such as p=.046). Give exact p-value unless <.001. The smallest p-value that should be expressed is <.001. The largest p-value is >.99.
+\blindtext
+
+The problem  of XYZ has been studied before \cite{Lamport:Book:1989}.
+\citet{Burkhardt:JNS:2019} wrote interesting stuff.
+Some text with another citation~\cite{article-minimal}.
+
+\begin{table}[tbh!]
+\caption{Table to test captions and labels.\label{tab:example}}
+\centering
+\begin{tabular}{|c c c c|} 
+ \hline
+ Col1 & Col2 & Col2 & Col3 \\ [0.5ex] 
+ \hline\hline
+ 1 & 6 & 87837 & 787 \\ 
+ 2 & 7 & 78 & 5415 \\
+ 3 & 545 & 778 & 7507 \\
+ 4 & 545 & 18744 & 7560 \\
+ 5 & 88 & 788 & 6344 \\ [1ex] 
+ \hline
+\end{tabular}
+\end{table}
+
+\section*{Discussion}
+\label{sec:discussion}
+% No more than 800 words. Do not repeat in detail the data given in the Results section. Do not cite tables or figures in the discussion. These should be introduced in the Materials and Methods and Results sections.
+%
+%The first paragraph should briefly restate the problem that you studied and the primary results. Provide a succinct one paragraph summary of your entire study: briefly restate the background for your study and why it was done. Then state your major findings. Instead of providing general statements that something was generally better or superior, provide specific metrics (key results) and p-values that support your statements.
+%
+%Include implications of the findings and their limitations, in particular with reference to the use of modified methods, statistical or otherwise. Relate the observations to other relevant studies. Link the conclusions with the goals of the study, but avoid unqualified statements and conclusions not supported completely by the data. Avoid claiming priority and alluding to or giving the results of ongoing investigations that have not been completed or that are not part of the study. State new hypotheses when warranted, but clearly label them as such.
+%
+%The second to last paragraph of this section should address study limitations. The final paragraph should summarize your results and findings; if appropriate, offer what you think should be done in the future to advance your study.
+\blindtext
+
+
+% References
+\printbibliography[env=simplebib]
+
+\clearpage
+\section*{Figure Legend(s)}
+\makeatletter
+\@starttoc{lof}% Print List of Figures
+\makeatother
+
+\end{document}

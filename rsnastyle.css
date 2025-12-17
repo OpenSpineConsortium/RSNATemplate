@@ -1,0 +1,81 @@
+/* @import url("lwarp.css");  /* keep all default lwarp rules */
+/* @import url("lwarp_formal.css");  /* alternative lwarp rules */
+@import url("lwarp_mod.css");  /* modified rules to help MS Word */
+
+/* Make the whole document Times New Roman */
+html, body,
+span.textnormal, div.textnormal,  /* override lwarp’s text selectors */
+p, li, td, th, caption, figcaption,
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Times New Roman", Times, serif;
+}
+
+/* (optional) leave monospace elements alone */
+code, pre, kbd, samp { font-family: inherit; }
+
+/* Prevent small caps in affiliations */
+span.affiliation {
+  font-variant: normal;   /* disable small caps */
+  font-style: normal;
+  text-transform: none;
+  font-size: 1em;        /* match base text size */
+}
+
+/* Section headings: normal size text, underlined */
+h2, h4 {
+  font-size: 1em;          /* same size as body text */
+  font-weight: normal;     /* no extra bold */
+  text-decoration: underline; /* underline */
+  text-align: left;        /* left alignment */
+}
+
+
+/* Subsections headings: italic, inline */
+h3, h5 {
+  font-size: 1em;          /* same size as body text */
+  font-weight: normal;     /* no extra bold */
+  font-style: italic;      /* italic */
+  display: inline;         /* prevents line break */
+  margin: 0;              /* removes top/bottom space */
+  padding-right: 0.5em;   /* little gap before text */
+}
+
+/* lwarp drops an anchor node between the heading and paragraph.
+   Normalize any such anchor/span so it doesn't force a break. */
+h3 + a,
+h3 + a[id],
+h3 + a[name],
+h3 + span[id],
+h3 + span[name],
+h5 + a,
+h5 + a[id],
+h5 + a[name],
+h5 + span[id],
+h5 + span[name] {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+/* Make ONLY the first following paragraph inline (skip over 0–2 anchors) */
+h3 + p,
+h3 + a + p,
+h3 + span + p,
+h3 + a + a + p,
+h3 + a + span + p,
+h3 + span + a + p,
+h5 + p,
+h5 + a + p,
+h5 + span + p,
+h5 + a + a + p,
+h5 + a + span + p,
+h5 + span + a + p {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+/* Optional: insert a space after the run-in title */
+h3::after, h5::after {
+  content: ". ";
+}

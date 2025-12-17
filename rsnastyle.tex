@@ -1,0 +1,122 @@
+% Use basic fonts such as Arial, Calibri, or Times New Roman at 11 points.
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% Enable html conversion through lwarp
+\usepackage[mathjax]{lwarp}
+
+\makeatletter
+\@ifpackageloaded{lwarp}{%
+  % lwarp is loaded
+  % Instruct lwarp to help generate html output for MS Word reading
+  \booltrue{FormatWP}
+  
+  % Specify font and other styles for html output
+  \CSSFilename{rsnastyle.css}
+}{%
+  % lwarp is NOT loaded
+}
+\makeatother
+
+% Hack to make the bibliography into a numbered list in MS Word
+% See https://github.com/bdtc/lwarp/discussions/38
+\makeatletter
+
+\newcommand*{\LWR@enumerateitem}[1][]{%
+    \LWR@stoppars%
+    \LWR@startnewdepth{listitem}%
+    \LWR@htmltag{li}%
+    \LWR@orignewline%
+    \LWR@startpars%
+    \LWR@ensuredoingapar%
+    \LWR@origitem[#1]%
+}
+
+\def\LWR@enumeratestart{%
+    \renewcommand*{\LWR@printcloselist}{\LWR@printcloseenumerate}%
+    \renewcommand*{\LWR@printopenlist}{%
+        ol % space
+        class=\textquotedbl{}enumerate\textquotedbl{} % space
+        style=\textquotedbl\LWR@print@mbox{list-style-type:decimal}\textquotedbl{}%
+    }%
+    \LetLtxMacro\item\LWR@enumerateitem%
+    \LWR@nulllistfills%
+}
+
+\makeatother
+
+\usepackage{graphicx} % Required for inserting images
+
+% Page size
+\usepackage[paper=a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=3cm]{geometry}
+
+% Remove page numbers
+\pagestyle{empty}
+
+% Double line spacing
+\usepackage{setspace}
+\doublespacing
+
+% Author info
+\usepackage{authblk}
+\date{}
+
+% Anonymous title style
+\makeatletter
+\renewcommand{\maketitle}{
+\begin{center}
+{\LARGE\textbf{\@title}}
+\end{center}
+}
+\makeatother
+
+
+% Push the figures to the end
+\usepackage[nolists,tablesfirst,nomarkers]{endfloat}
+
+% Customize List of Figures and Tables
+\usepackage{tocloft}
+\renewcommand{\cftfigpresnum}{Fig.~}   % Figure number prefix
+%\renewcommand{\cftfigaftersnum}{} % Figure number suffix
+\setlength{\cftfigindent}{0pt}    % left align everything
+\setlength{\cftfignumwidth}{1.2cm}  % space reserved for numbers
+\cftpagenumbersoff{figure}
+
+\renewcommand{\cfttabpresnum}{Table~}
+\setlength{\cfttabindent}{0pt}    % left align everything
+\setlength{\cfttabnumwidth}{1.5cm}  % space reserved for numbers
+\cftpagenumbersoff{table}
+
+% Remove indentation of paragraphs
+\usepackage{parskip}
+\setlength{\parindent}{0pt} % No indentation
+%\setlength{\parskip}{1em}   % Space between paragraphs
+
+% Number references consecutively in the order in which they are first mentioned in the manuscript.
+% Verify reference order at the time of revision.
+% The abbreviations used for periodicals cited in the references should follow the style of the National Library of Medicine.
+% It is the responsibility of the author(s) to ensure the accuracy of all references.
+% Citation format:
+% 1. Tyler LN, Harville TO, Blackall DP, Callegari PE, Keenan GF, Elliott M. Multiple alloantibodies after transfusion in an infant treated with infliximab. N Engl J Med 2007;357:2092-2093. doi: 10.1056/NEJMc070741
+\usepackage[style=nejm,natbib=true]{biblatex}
+
+% Use a basic enumerate for the bibliography for compatibility with MS Word
+\defbibenvironment{simplebib}
+  {\enumerate}
+  {\endenumerate}
+  {\item}  
+
+% Handy commands
+\newcommand{\figref}[1]{\figurename~\ref{#1}}
+\newcommand{\tabref}[1]{\tablename~\ref{#1}}
+
+% use normal font for URLs
+\urlstyle{same}
+
+% Don't use hyperref for simplicity of MS Word conversion
+%\usepackage[hidelinks]{hyperref}
+
+% If you use hyperref and glossaries, you must load hyperref first (although, in general, hyperref should be loaded after other packages).
+\usepackage[acronym]{glossaries} % for abbreviations
+\renewcommand*{\glossarysection}[2][]{} % removes heading completely
+\makeglossaries
