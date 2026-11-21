@@ -26,6 +26,19 @@ END {
     system('echo "Running lwarpmk"; lwarpmk html');
     system('echo "Running lwarpmk"; lwarpmk html');
     system('echo "Running biber"; biber output');
+    # The references and the list of abbreviations of the HTML copy. lwarp builds that copy
+    # under the name of the document followed by _html: main_html on a laptop and on GitHub,
+    # where the line above (written for Overleaf's name, output) finds nothing.
+    my $html = 'main_html';
+    if (open(my $conf, '<', 'lwarpmk.conf')) {
+      while (my $line = <$conf>) {
+        $html = $1 . '_html' if $line =~ /^sourcename = \[\[(.+)\]\]/;
+      }
+      close($conf);
+    }
+    print "Running biber and makeglossaries for $html\n";
+    system('biber', $html);
+    system('lwarpmk', 'htmlglossary');
     system('echo "Running lwarpmk"; lwarpmk html1');
     system('echo "Running lwarpmk"; lwarpmk html1');
     # pandoc doesn't work very well here. Best to open ht ehtml in MS Word directly
