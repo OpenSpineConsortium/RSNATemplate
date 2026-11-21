@@ -39,10 +39,17 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+      # A manuscript whose author has deleted the template's scripts still builds:
+      # without the script, there is the manuscript and nothing else to compile.
       - name: List what to build
         id: plan
         run: |
-          python3 scripts/configure.py --matrix >> "$GITHUB_OUTPUT"
+          if [ -f scripts/configure.py ]; then
+            python3 scripts/configure.py --matrix >> "$GITHUB_OUTPUT"
+          else
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+            echo 'matrix=[{"name":"Manuscript","slug":"manuscript","journal":"","type":"","configure":false}]' >> "$GITHUB_OUTPUT"
+          fi
           cat "$GITHUB_OUTPUT"
 
   tests:

@@ -6,10 +6,6 @@
 name: Configure manuscript
 
 on:
-  # TEMPORARY, removed by the next commit: a push starts this workflow once, to see on
-  # GitHub's machines that it refuses to run in the template itself.
-  push:
-    branches: [claude/journal-template]
   workflow_dispatch:
     inputs:
       journal:

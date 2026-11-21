@@ -29,6 +29,7 @@ The same lines, and the ones that hold for every article type of the journal (ti
 | `sample_bibliography.bib` | sample references: replace them with yours |
 | `latexmkrc` | the build settings |
 | `manuscript.json` | what this repository was configured as |
+| `scripts/`, `templates/`, `journals/`, `tests/` | the template's own machinery: what writes the skeleton, and the facts it is written from. They can stay. Once the journal and the article type are settled you may delete them; the build on GitHub goes on working |
 
 ## Build
 
