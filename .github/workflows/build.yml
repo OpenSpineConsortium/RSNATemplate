@@ -208,11 +208,14 @@ jobs:
             main-images/
           if-no-files-found: error
 
-  # Only in the template: the two commands the README gives for a laptop, on the skeleton
-  # the template ships. "latexmk" with no file name and no option: latexmkrc names the
-  # engine and the two documents, and makes no HTML copy. Then the same command with
-  # RSNA_HTML=1, which makes the HTML copy. The step after them finds both PDFs made and
-  # has nothing left to do.
+  # Only in the template: the commands the README gives for a laptop, on the skeleton the
+  # template ships. "latexmk" with no file name and no option: latexmkrc names the engine
+  # and the two documents, and makes no HTML copy. Then the same command with RSNA_HTML=1,
+  # which makes the HTML copy. Then the line of latexmkrc that an author changes in
+  # Overleaf, where no variable can be set: with the line at 1 the HTML copy is made without
+  # the variable, and RSNA_HTML=0 still builds the PDFs alone. "git status" then lists what
+  # these commands left behind that .gitignore does not cover (the changed line of latexmkrc
+  # is one). The step after them finds both PDFs made and has nothing left to do.
   laptop:
     name: latexmk with no file name, as on a laptop
     needs: plan
@@ -240,3 +243,11 @@ jobs:
             test ! -e main.html
             RSNA_HTML=1 latexmk --interaction=nonstopmode --halt-on-error
             test -s main.html
+            rm main.html
+            sed -i 's/^our \$rsna_html = 0;$/our $rsna_html = 1;/' latexmkrc
+            RSNA_HTML=0 latexmk --interaction=nonstopmode --halt-on-error
+            test ! -e main.html
+            latexmk --interaction=nonstopmode --halt-on-error
+            test -s main.html
+            git status --short
+            export RSNA_HTML=0

@@ -26,9 +26,11 @@
 # figures and tables moved to the end (endfloat)
 *.fff
 *.ttt
-# the HTML copy (lwarp)
+# the HTML copy (lwarp), and the two PDFs above as lwarp turns them into pictures
 *_html.*
 /main.html
+/main.svg
+/title_page.svg
 /main-images/
 /main-images.txt
 /main_html-images.txt

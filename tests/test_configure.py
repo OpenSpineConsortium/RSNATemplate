@@ -640,8 +640,9 @@ def test_the_build_compiles_every_pair_and_keeps_the_pdfs():
     }
     # the check of the PDFs compiles the PDFs alone, whatever latexmkrc says
     assert "pre_compile: export RSNA_HTML=0" in job("pdf")
-    # in the template: the two commands the README gives for a laptop. "latexmk" with no
-    # file name makes the PDFs and no HTML copy; with RSNA_HTML=1 it makes the HTML copy
+    # in the template: the commands the README gives for a laptop. "latexmk" with no file
+    # name makes the PDFs and no HTML copy; with RSNA_HTML=1 it makes the HTML copy; so does
+    # the line of latexmkrc that an author changes in Overleaf, unless RSNA_HTML=0 says no
     laptop = job("laptop")
     assert (
         "\n          pre_compile: |\n"
@@ -652,6 +653,14 @@ def test_the_build_compiles_every_pair_and_keeps_the_pdfs():
         "            test ! -e main.html\n"
         "            RSNA_HTML=1 latexmk --interaction=nonstopmode --halt-on-error\n"
         "            test -s main.html\n"
+        "            rm main.html\n"
+        "            sed -i 's/^our \\$rsna_html = 0;$/our $rsna_html = 1;/' latexmkrc\n"
+        "            RSNA_HTML=0 latexmk --interaction=nonstopmode --halt-on-error\n"
+        "            test ! -e main.html\n"
+        "            latexmk --interaction=nonstopmode --halt-on-error\n"
+        "            test -s main.html\n"
+        "            git status --short\n"
+        "            export RSNA_HTML=0\n"
     ) in laptop
     assert "poppler-utils" in laptop
     assert "@default_files = ('main.tex', 'title_page.tex');" in configure.read(REPO / "latexmkrc")
