@@ -1,0 +1,48 @@
+# What a build leaves behind. Figures you add as PDF files are not ignored:
+# only the two PDFs that the build itself makes.
+/main.pdf
+/title_page.pdf
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+# the list of abbreviations (glossaries)
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+# figures and tables moved to the end (endfloat)
+*.fff
+*.ttt
+# the HTML copy (lwarp)
+*_html.*
+/main.html
+/main-images/
+/main-images.txt
+/main_html-images.txt
+lwarpmk.conf
+*.lwarpmkconf
+lwarp.css
+lwarp_*.css
+lwarp_*.txt
+lwarp_*.png
+lwarp_*.eps
+lwarp_*.pdf
+sample_project.css
+comment_*.cut
+*.sidetoc
+# Python
+__pycache__/
+.pytest_cache/

@@ -1,0 +1,59 @@
+# <<title>>
+
+<<description>>
+
+A manuscript for *<<journal>>*, article type **<<article_type>>**, written in LaTeX (LuaLaTeX).
+
+## What the journal asks of this article type
+
+As read on <<read_date>>, in plain words. These are not the journal's own words, and nobody has compared them with the live page: **check the journal's instructions before you submit**: <<instructions_url>>
+
+| | As read | How sure |
+|---|---|---|
+<<limits_rows>>
+
+How sure:
+
+<<grades_list>>
+
+The same lines, and the ones that hold for every article type of the journal (title pages, anonymisation, statements, file type), stand as comments at the top of `main.tex`. Their sources, each with its address and date, are in `journals/requirements.json`.
+
+## Files
+
+| File | What it is |
+|---|---|
+| `main.tex` | the manuscript: abbreviated title page (anonymized), abstract, body, references, figure legends |
+| `title_page.tex` | the full title page (authors, institutions, funding, disclosures, data sharing statement): a separate file, not anonymized |
+| `rsnastyle.tex`, `rsnafont.tex`, `rsnastyle.css` | the style: an 11-point Times font, double spacing, no page numbers, figures and tables at the end |
+| `nejm.bbx`, `nejm.cbx` | the reference style |
+| `sample_bibliography.bib` | sample references: replace them with yours |
+| `latexmkrc` | the build settings |
+| `manuscript.json` | what this repository was configured as |
+
+## Build
+
+On GitHub: every push builds `main.pdf` and `title_page.pdf`. Open Actions, the latest run of "Build", and download the PDFs under Artifacts.
+
+On a laptop with TeX Live or MiKTeX (LuaLaTeX, latexmk, biber):
+
+    latexmk
+
+builds both PDFs and then makes the HTML copy of the manuscript that opens in Microsoft Word (lwarp). For the PDFs alone, set `RSNA_PDF_ONLY=1` first:
+
+    RSNA_PDF_ONLY=1 latexmk             (Linux, macOS)
+    $env:RSNA_PDF_ONLY=1; latexmk       (Windows PowerShell)
+
+The font is Times New Roman where it is installed, and TeX Gyre Termes, a free font of the same shape that every TeX Live has, where it is not.
+
+In Overleaf: New Project, Import from GitHub, this repository (or download it as a ZIP and use Upload Project). Overleaf reads `latexmkrc`, so the compiler is LuaLaTeX whatever the menu says. The main document is `main.tex`; to print the full title page, set the main document to `title_page.tex` in the menu and compile once.
+
+## Another journal or article type
+
+    python scripts/configure.py --list
+    python scripts/configure.py --journal "<<journal>>" --type "<<article_type>>" --title "..." --description "..."
+
+or Actions, "Configure manuscript", Run workflow. A file you have edited since the last configuration is never written over: the run stops and names it, unless you add `--force` on a laptop.
+
+## Credit
+
+Made from a community LaTeX template for manuscripts sent to the journals of the Radiological Society of North America (RSNA). It is not made or endorsed by the RSNA. The template descends from https://github.com/cai4cai/RSNATemplate, whose style files, reference style and writing notes it keeps.

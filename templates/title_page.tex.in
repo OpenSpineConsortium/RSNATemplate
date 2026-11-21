@@ -1,0 +1,49 @@
+<<header>>
+
+% The same page set-up as the manuscript (rsnastyle.tex), without the parts a title page
+% does not need (references, abbreviations, figures at the end, the HTML copy).
+\documentclass[11pt]{article}
+\input{rsnafont}
+\usepackage[paper=a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=3cm]{geometry}
+\pagestyle{empty}
+\usepackage{setspace}
+\doublespacing
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\usepackage{authblk}
+\date{}
+
+<<title_note>>
+% Keep it the same as the title in main.tex.
+\title{<<title>>}
+
+% Authors, with academic degrees, and their institutions, in the order of authorship
+\author[1]{First A. Author, PhD}
+\author[2]{Second B. Author, MD}
+\author[1,3]{Third C. Author, MSc}
+\affil[1]{Department of X, Institution A, City, State, Country}
+\affil[2]{Department of Y, Institution B, City, State, Country}
+\affil[3]{Department of Z, Institution C, City, State, Country}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\textbf{Article type}: <<article_type>>
+
+\textbf{Corresponding author}: TODO (name, full address, telephone, e-mail)
+
+<<word_count_note>>
+\textbf{Word count}: TODO
+
+<<funding_note>>
+\textbf{Funding}: TODO
+
+<<disclosures_note>>
+\textbf{Disclosures}: TODO
+
+<<data_sharing_note>>
+\textbf{Data sharing statement}: TODO
+
+\end{document}

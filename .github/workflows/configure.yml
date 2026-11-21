@@ -1,0 +1,140 @@
+# Turns a copy of the template into the manuscript of one journal and article type.
+# Run it once in your own copy: Actions, "Configure manuscript", Run workflow.
+#
+# The two lists of choices are written by scripts/sync_workflow.py from
+# journals/requirements.json; a test fails when they differ from the data.
+name: Configure manuscript
+
+on:
+  workflow_dispatch:
+    inputs:
+      journal:
+        description: Journal
+        required: true
+        type: choice
+        default: "Radiology: Artificial Intelligence"
+        options:
+          # BEGIN journals (written by scripts/sync_workflow.py: do not edit by hand)
+          - "Radiology: Artificial Intelligence"
+          - "Radiology"
+          - "Radiology: Cardiothoracic Imaging"
+          - "Radiology: Imaging Cancer"
+          - "RadioGraphics"
+          - "Radiology Advances"
+          # END journals
+      article_type:
+        description: Article type (if the journal does not take it, the run stops and lists what it takes)
+        required: true
+        type: choice
+        default: "Original Research"
+        options:
+          # BEGIN article types (written by scripts/sync_workflow.py: do not edit by hand)
+          - "Original Research"
+          - "Technical Developments"
+          - "AI in Brief"
+          - "Data Resources"
+          - "Special Report"
+          - "Review"
+          - "Editorial (Invited Commentary; Editorial Opinion)"
+          - "Letter to the Editor and Reply"
+          - "Research Letters"
+          - "Review articles"
+          - "Radiology in Focus"
+          - "How I Do It"
+          - "Best Practice"
+          - "Special Reports"
+          - "Radiology Scientific Expert Panel"
+          - "Statements/Guidelines"
+          - "Editorials"
+          - "Letters to the Editor and Replies"
+          - "Images in Radiology"
+          - "Radiology Diagnosis Please"
+          - "Radiology In Training: Perspective"
+          - "Radiology In Training: Research in Practice"
+          - "Case Reports"
+          - "Case Series"
+          - "Images in Cardiothoracic Imaging"
+          - "Editorials (invited commentary)"
+          - "Imaging Essays"
+          - "Debate"
+          - "Brief Reports"
+          - "Images in Cancer"
+          - "Editorials and Commentaries"
+          - "Manuscript (full length)"
+          - "Fundamental / Tutorial"
+          - "Update"
+          - "Commentary"
+          - "Editorial"
+          - "Statements and Guidelines"
+          - "Art of Imaging"
+          # END article types
+      title:
+        description: Title of the manuscript
+        required: true
+        type: string
+      description:
+        description: Short description, one or two sentences (it goes in the README)
+        required: false
+        type: string
+
+# The one permission this workflow has: to write the files of this repository.
+permissions:
+  contents: write
+
+env:
+  # The template itself. A copy made with "Use this template" has another name.
+  TEMPLATE_REPOSITORY: OpenSpineConsortium/RSNATemplate
+
+jobs:
+  configure:
+    name: Write the manuscript skeleton
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop if this is the template itself
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          is_template="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.is_template' || true)"
+          if [ "${is_template}" = "true" ] || [ "${GITHUB_REPOSITORY}" = "${TEMPLATE_REPOSITORY}" ]; then
+            echo "::error::This is the template itself, and it stays as it is. Press 'Use this template' on the repository's front page to make your own copy, then run this workflow there."
+            exit 1
+          fi
+
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+
+      # What was typed in the form reaches the script as environment variables.
+      # It is never pasted into a command line.
+      - name: Write main.tex, title_page.tex and README.md
+        env:
+          RSNA_JOURNAL: ${{ inputs.journal }}
+          RSNA_TYPE: ${{ inputs.article_type }}
+          RSNA_TITLE: ${{ inputs.title }}
+          RSNA_DESCRIPTION: ${{ inputs.description }}
+        run: python3 scripts/configure.py
+
+      - name: Commit as the Actions bot
+        env:
+          RSNA_JOURNAL: ${{ inputs.journal }}
+          RSNA_TYPE: ${{ inputs.article_type }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "Nothing to commit: the repository was already configured this way."
+          else
+            git commit --message "Configure manuscript: ${RSNA_JOURNAL}, ${RSNA_TYPE}"
+            git push
+          fi
+
+  # A commit made by a workflow does not start other workflows, so the first PDF of the
+  # new skeleton is built here, by the same steps that build it on every later push.
+  pdf:
+    name: First PDF
+    needs: configure
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.ref_name }}

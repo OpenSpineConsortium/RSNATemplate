@@ -1,0 +1,18 @@
+% Use basic fonts such as Arial, Calibri, or Times New Roman at 11 points.
+\usepackage{fontspec}
+
+% Times New Roman where the computer has it: nothing changes for an author with the font.
+% Where it is missing (a plain TeX Live on Linux, a build on GitHub's machines), the text
+% is set in TeX Gyre Termes, a free font of the same shape that comes with every TeX Live.
+% It is loaded by its file names, so it does not have to be installed as a system font.
+\IfFontExistsTF{Times New Roman}{%
+  \setmainfont{Times New Roman}%
+}{%
+  \typeout{rsnafont: Times New Roman is not installed; the text is set in TeX Gyre Termes.}%
+  \setmainfont{texgyretermes}[
+    Extension      = .otf,
+    UprightFont    = *-regular,
+    BoldFont       = *-bold,
+    ItalicFont     = *-italic,
+    BoldItalicFont = *-bolditalic]%
+}

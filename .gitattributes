@@ -1,0 +1,9 @@
+# One kind of line ending everywhere, so a file reads the same on every computer.
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.tiff binary
+*.eps binary

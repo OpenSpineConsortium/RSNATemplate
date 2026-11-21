@@ -1,0 +1,131 @@
+# Compiles the PDFs with LuaLaTeX on every push and pull request.
+#
+# In a manuscript (a copy that "Configure manuscript" has configured): main.tex and
+# title_page.tex as they are, in one job.
+# In the template itself: the skeleton of every journal and article type, each written by
+# scripts/configure.py and compiled in a job of its own, and the tests.
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: The branch or commit to build (default, the one that started the run)
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.event_name }}-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: What to build
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.plan.outputs.configured }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: List what to build
+        id: plan
+        run: |
+          python3 scripts/configure.py --matrix >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+  tests:
+    name: Tests
+    needs: plan
+    if: needs.plan.outputs.configured == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Run the tests
+        run: pipx run --spec "pytest==8.3.5" pytest -q tests
+
+  pdf:
+    name: ${{ matrix.name }}
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      # Only in the template: write the skeleton of this journal and article type, the way
+      # the "Configure manuscript" workflow does. The title carries every character that
+      # LaTeX treats specially, so the check also proves that a typed title cannot break it.
+      - name: Write the skeleton
+        if: ${{ matrix.configure }}
+        env:
+          RSNA_JOURNAL: ${{ matrix.journal }}
+          RSNA_TYPE: ${{ matrix.type }}
+          RSNA_TITLE: 'Check of the template: 100% of A & B, under_score, #1, {braces}, ~tilde, ^caret, \backslash, $dollar'
+          RSNA_DESCRIPTION: Written by the build, to check that this skeleton compiles.
+        run: python3 scripts/configure.py
+
+      # TeX Live in a container. RSNA_PDF_ONLY=1 leaves out the HTML copy that latexmkrc
+      # makes for authors after the PDF: the check needs the PDFs alone.
+      - name: Compile with LuaLaTeX
+        uses: xu-cheng/latex-action@4.1.0
+        with:
+          root_file: |
+            main.tex
+            title_page.tex
+          latexmk_use_lualatex: true
+          pre_compile: export RSNA_PDF_ONLY=1
+
+      - name: Check that both PDFs were made
+        run: |
+          for file in main.pdf title_page.pdf; do
+            if ! head -c 5 "$file" | grep -q '%PDF-'; then
+              echo "::error::$file was not made"
+              exit 1
+            fi
+          done
+          ls -l main.pdf title_page.pdf
+
+      # Only in the template, where the sample text must come out whole: every reference
+      # and citation resolved, the list of abbreviations made, the fallback font in use.
+      - name: Check that nothing is left unresolved
+        if: ${{ matrix.configure }}
+        run: |
+          if grep -n -E "There were undefined references|Citation .* undefined|Please \(re\)run Biber|Empty bibliography|Rerun to get" main.log; then
+            echo "::error::main.log reports something left unresolved"
+            exit 1
+          fi
+          if ! test -s main.acr; then
+            echo "::error::the list of abbreviations (main.acr) was not made"
+            exit 1
+          fi
+          grep -h "rsnafont:" main.log title_page.log || echo "Times New Roman was found on this machine"
+
+      - name: Keep the PDFs
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pdf-${{ matrix.slug }}
+          path: |
+            main.pdf
+            title_page.pdf
+          if-no-files-found: error
