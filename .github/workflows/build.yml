@@ -182,3 +182,30 @@ jobs:
             *.svg
             main-images/
           if-no-files-found: error
+
+  # Only in the template: "latexmk" with no file name and no option, the command the README
+  # gives for a laptop, on the skeleton the template ships. latexmkrc names the engine and
+  # the two documents; the step after it finds both PDFs made and has nothing left to do.
+  laptop:
+    name: latexmk with no file name, as on a laptop
+    needs: plan
+    if: needs.plan.outputs.configured == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Run latexmk
+        uses: xu-cheng/latex-action@4.1.0
+        with:
+          root_file: title_page.tex
+          latexmk_use_lualatex: true
+          pre_compile: |
+            export RSNA_PDF_ONLY=1
+            latexmk --interaction=nonstopmode --halt-on-error
+            test -s main.pdf
+            test -s title_page.pdf
+            test -s main.acr

@@ -508,12 +508,22 @@ def test_the_build_compiles_every_pair_and_keeps_the_pdfs():
                    "main.pdf", "title_page.pdf"):
         assert needed in text, needed
     assert re.findall(r"(?m)^permissions:\n((?:  .*\n)+)", text) == ["  contents: read\n"]
-    # the check of the template compiles the PDFs alone; the tests run there too
-    pdf = text[text.index("\n  pdf:"):text.index("\n  word:")]
+    def job(name):
+        start = text.index("\n  %s:\n" % name)
+        following = re.search(r"\n  [a-z]+:\n", text[start + 1:])
+        return text[start:start + 1 + following.start()] if following else text[start:]
+
+    # the check of the template compiles the PDFs alone; the tests run there too, and so
+    # does latexmk with no file name, the command the README gives for a laptop
+    pdf = job("pdf")
     assert "export RSNA_PDF_ONLY=1" in pdf
-    assert "needs.plan.outputs.configured == 'false'" in text[text.index("\n  tests:"):text.index("\n  pdf:")]
+    assert "needs.plan.outputs.configured == 'false'" in job("tests")
+    laptop = job("laptop")
+    assert "needs.plan.outputs.configured == 'false'" in laptop
+    assert "\n            latexmk --interaction=nonstopmode --halt-on-error\n" in laptop
+    assert "@default_files = ('main.tex', 'title_page.tex');" in configure.read(REPO / "latexmkrc")
     # in a manuscript, and only there, a second job keeps the HTML copy; it cannot fail the run
-    word = text[text.index("\n  word:"):]
+    word = job("word")
     assert "needs.plan.outputs.configured == 'true'" in word and "continue-on-error: true" in word
     assert "RSNA_PDF_ONLY" not in "\n".join(line for line in word.split("\n") if not line.strip().startswith("#"))
     assert "main.html" in word and "poppler-utils" in word

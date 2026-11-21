@@ -37,7 +37,9 @@ builds `main.pdf` and `title_page.pdf`, and then makes the same HTML copy for Mi
 
 Configure the repository first, in one of the two ways above. Then, in Overleaf, choose **New Project**, **Import from GitHub**, and your repository. If your Overleaf plan has no GitHub link, download the repository from GitHub as a ZIP (**Code**, **Download ZIP**) and choose **New Project**, **Upload Project**.
 
-Overleaf reads `latexmkrc`, so the compiler is LuaLaTeX whatever its menu says. The main document is `main.tex`. To print the full title page, set the main document to `title_page.tex` in the menu and compile once.
+In Overleaf's menu, set the compiler to **LuaLaTeX** (the template does not compile with pdfLaTeX) and the main document to `main.tex`. To print the full title page, set the main document to `title_page.tex` and compile once.
+
+The check of this template runs on GitHub's machines. It has not been tried in Overleaf itself; the template it descends from was written there.
 
 ## What the step writes
 

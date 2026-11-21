@@ -48,7 +48,7 @@ builds both PDFs and then makes the same HTML copy, `main.html` (lwarp needs the
 
 The font is Times New Roman where it is installed, and TeX Gyre Termes, a free font of the same shape that every TeX Live has, where it is not.
 
-In Overleaf: New Project, Import from GitHub, this repository (or download it as a ZIP and use Upload Project). Overleaf reads `latexmkrc`, so the compiler is LuaLaTeX whatever the menu says. The main document is `main.tex`; to print the full title page, set the main document to `title_page.tex` in the menu and compile once.
+In Overleaf: New Project, Import from GitHub, this repository (or download it as a ZIP and use Upload Project). In Overleaf's menu, set the compiler to LuaLaTeX (the manuscript does not compile with pdfLaTeX) and the main document to `main.tex`. To print the full title page, set the main document to `title_page.tex` and compile once.
 
 ## Another journal or article type
 
