@@ -22,6 +22,7 @@
 *.glg
 *.glo
 *.gls
+*.glsdefs
 *.ist
 # figures and tables moved to the end (endfloat)
 *.fff
@@ -42,6 +43,8 @@ lwarp_sagebrush.css
 lwarp_mathjax.txt
 lwarp_baseline_marker.png
 lwarp_baseline_marker.eps
+lwarp_one_limage.txt
+lwarp.xdy
 sample_project.css
 comment_*.cut
 *.sidetoc

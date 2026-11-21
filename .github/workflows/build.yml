@@ -213,9 +213,10 @@ jobs:
   # and the two documents, and makes no HTML copy. Then the same command with RSNA_HTML=1,
   # which makes the HTML copy. Then the line of latexmkrc that an author changes in
   # Overleaf, where no variable can be set: with the line at 1 the HTML copy is made without
-  # the variable, and RSNA_HTML=0 still builds the PDFs alone. "git status" then lists what
-  # these commands left behind that .gitignore does not cover (the changed line of latexmkrc
-  # is one). The step after them finds both PDFs made and has nothing left to do.
+  # the variable, and RSNA_HTML=0 still builds the PDFs alone. After all that "git status"
+  # must show the changed line of latexmkrc and nothing else: whatever a build leaves
+  # behind is in .gitignore. The step after them finds both PDFs made and has nothing left
+  # to do.
   laptop:
     name: latexmk with no file name, as on a laptop
     needs: plan
@@ -250,4 +251,5 @@ jobs:
             latexmk --interaction=nonstopmode --halt-on-error
             test -s main.html
             git status --short
+            test "$(git status --short)" = " M latexmkrc"
             export RSNA_HTML=0

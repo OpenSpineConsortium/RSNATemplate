@@ -660,6 +660,7 @@ def test_the_build_compiles_every_pair_and_keeps_the_pdfs():
         "            latexmk --interaction=nonstopmode --halt-on-error\n"
         "            test -s main.html\n"
         "            git status --short\n"
+        "            test \"$(git status --short)\" = \" M latexmkrc\"\n"
         "            export RSNA_HTML=0\n"
     ) in laptop
     assert "poppler-utils" in laptop
