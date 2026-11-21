@@ -192,10 +192,10 @@ def journal_table(data, journal):
     lines = [
         "### %s" % journal["name"],
         "",
-        "The journal's instructions: %s" % journal["instructions_url"],
+        "The journal's instructions: <%s>" % journal["instructions_url"],
         "",
         "| Article type | Body words | Abstract | Summary statement | Key points | References | Figures | Tables | How sure | Sources |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for atype in journal["article_types"]:
         facts = [atype[field] for field in ROW_FIELDS]
@@ -215,11 +215,11 @@ def journal_table(data, journal):
         lines.append("| " + " | ".join(str(cell).replace("|", "\\|") for cell in cells) + " |")
     lines += ["", "Sources of this table:", ""]
     for index, (address, route, date, official) in enumerate(sources, 1):
-        text = "%d. %s" % (index, address)
+        text = "%d. <%s>" % (index, address)
         if route or date:
             text += " (%s)" % ", ".join(part for part in (route, "read %s" % date if date else None) if part)
         if official:
-            text += "; the official page it copies: %s" % official
+            text += "; the official page it copies: <%s>" % official
         lines.append(text)
     return lines
 

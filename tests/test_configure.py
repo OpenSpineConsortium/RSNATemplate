@@ -508,8 +508,20 @@ def test_the_build_compiles_every_pair_and_keeps_the_pdfs():
                    "main.pdf", "title_page.pdf"):
         assert needed in text, needed
     assert re.findall(r"(?m)^permissions:\n((?:  .*\n)+)", text) == ["  contents: read\n"]
+    # the check of the template compiles the PDFs alone; the tests run there too
+    pdf = text[text.index("\n  pdf:"):text.index("\n  word:")]
+    assert "export RSNA_PDF_ONLY=1" in pdf
+    assert "needs.plan.outputs.configured == 'false'" in text[text.index("\n  tests:"):text.index("\n  pdf:")]
+    # in a manuscript, and only there, a second job keeps the HTML copy; it cannot fail the run
+    word = text[text.index("\n  word:"):]
+    assert "needs.plan.outputs.configured == 'true'" in word and "continue-on-error: true" in word
+    assert "RSNA_PDF_ONLY" not in "\n".join(line for line in word.split("\n") if not line.strip().startswith("#"))
+    assert "main.html" in word and "poppler-utils" in word
     latexmkrc = configure.read(REPO / "latexmkrc")
     assert "RSNA_PDF_ONLY" in latexmkrc and "lwarpmk html" in latexmkrc, "the HTML copy stays for authors"
+    assert "biber output" in latexmkrc, "the line written for Overleaf stays"
+    assert "system('biber', $html)" in latexmkrc and "htmlglossary" in latexmkrc
+    assert "$? = $build" in latexmkrc, "the HTML steps do not replace the result of the PDF build"
     font = configure.read(REPO / "rsnafont.tex")
     assert "\\IfFontExistsTF{Times New Roman}" in font and "\\setmainfont{Times New Roman}" in font
     assert "texgyretermes" in font

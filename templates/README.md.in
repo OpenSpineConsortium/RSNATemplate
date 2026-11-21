@@ -6,10 +6,10 @@ A manuscript for *<<journal>>*, article type **<<article_type>>**, written in La
 
 ## What the journal asks of this article type
 
-As read on <<read_date>>, in plain words. These are not the journal's own words, and nobody has compared them with the live page: **check the journal's instructions before you submit**: <<instructions_url>>
+As read on <<read_date>>, in plain words. These are not the journal's own words, and nobody has compared them with the live page: **check the journal's instructions before you submit**: <<<instructions_url>>>
 
 | | As read | How sure |
-|---|---|---|
+| --- | --- | --- |
 <<limits_rows>>
 
 How sure:
@@ -21,7 +21,7 @@ The same lines, and the ones that hold for every article type of the journal (ti
 ## Files
 
 | File | What it is |
-|---|---|
+| --- | --- |
 | `main.tex` | the manuscript: abbreviated title page (anonymized), abstract, body, references, figure legends |
 | `title_page.tex` | the full title page (authors, institutions, funding, disclosures, data sharing statement): a separate file, not anonymized |
 | `rsnastyle.tex`, `rsnafont.tex`, `rsnastyle.css` | the style: an 11-point Times font, double spacing, no page numbers, figures and tables at the end |
@@ -34,11 +34,13 @@ The same lines, and the ones that hold for every article type of the journal (ti
 
 On GitHub: every push builds `main.pdf` and `title_page.pdf`. Open Actions, the latest run of "Build", and download the PDFs under Artifacts.
 
+For a journal that takes the text as a Word file, the same run keeps an HTML copy of the manuscript: download the artifact `word-manuscript`, unpack it, open `main.html` in Microsoft Word and save it as a Word document. The copy is made by lwarp. It carries the text, the tables, the references and the list of abbreviations; how Word shows it has not been checked by the template, so read it through before you upload it.
+
 On a laptop with TeX Live or MiKTeX (LuaLaTeX, latexmk, biber):
 
     latexmk
 
-builds both PDFs and then makes the HTML copy of the manuscript that opens in Microsoft Word (lwarp). For the PDFs alone, set `RSNA_PDF_ONLY=1` first:
+builds both PDFs and then makes the same HTML copy, `main.html` (lwarp needs the poppler tools `pdftotext` and `pdftocairo` for it). For the PDFs alone, set `RSNA_PDF_ONLY=1` first:
 
     RSNA_PDF_ONLY=1 latexmk             (Linux, macOS)
     $env:RSNA_PDF_ONLY=1; latexmk       (Windows PowerShell)
@@ -56,4 +58,4 @@ or Actions, "Configure manuscript", Run workflow. A file you have edited since t
 
 ## Credit
 
-Made from a community LaTeX template for manuscripts sent to the journals of the Radiological Society of North America (RSNA). It is not made or endorsed by the RSNA. The template descends from https://github.com/cai4cai/RSNATemplate, whose style files, reference style and writing notes it keeps.
+Made from a community LaTeX template for manuscripts sent to the journals of the Radiological Society of North America (RSNA). It is not made or endorsed by the RSNA. The template descends from [cai4cai/RSNATemplate](https://github.com/cai4cai/RSNATemplate), whose style files, reference style and writing notes it keeps.

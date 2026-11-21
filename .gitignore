@@ -35,11 +35,11 @@
 lwarpmk.conf
 *.lwarpmkconf
 lwarp.css
-lwarp_*.css
-lwarp_*.txt
-lwarp_*.png
-lwarp_*.eps
-lwarp_*.pdf
+lwarp_formal.css
+lwarp_sagebrush.css
+lwarp_mathjax.txt
+lwarp_baseline_marker.png
+lwarp_baseline_marker.eps
 sample_project.css
 comment_*.cut
 *.sidetoc
