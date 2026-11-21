@@ -1,10 +1,14 @@
 # Compiles the PDFs with LuaLaTeX on every push and pull request.
 #
-# In a manuscript (a copy that "Configure manuscript" has configured): main.tex and
-# title_page.tex as they are, in one job; and, in a second job, the HTML copy of the
-# manuscript that opens in Microsoft Word.
-# In the template itself: the skeleton of every journal and article type, each written by
-# scripts/configure.py and compiled in a job of its own, and the tests.
+# What it builds depends on where it runs. The job "What to build" tells the three apart:
+#   a manuscript (a copy that "Configure manuscript" has configured): main.tex and
+#     title_page.tex as they are, in one job; and, in a second job, the HTML copy of the
+#     manuscript that opens in Microsoft Word;
+#   a copy that nobody has configured yet: main.tex and title_page.tex as they came, in
+#     one job, and nothing else;
+#   the template itself: the skeleton of every journal and article type, each written by
+#     scripts/configure.py and compiled in a job of its own; the tests; the commands the
+#     README gives for a laptop; and the HTML copy of the skeleton the template ships.
 name: Build
 
 on:
@@ -26,40 +30,56 @@ concurrency:
   group: build-${{ github.workflow }}-${{ github.event_name }}-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
+env:
+  # The template itself. A copy made with "Use this template" has another name.
+  TEMPLATE_REPOSITORY: OpenSpineConsortium/RSNATemplate
+  # TeX Live, as one fixed image: a dated tag and its digest. The build does not change
+  # until this line does. To move to a newer TeX Live, take the newest dated tag and its
+  # digest from https://github.com/xu-cheng/latex-docker/pkgs/container/texlive-alpine
+  TEXLIVE_IMAGE: ghcr.io/xu-cheng/texlive-alpine:20261001@sha256:c06416ebbc69c8e90e07d1f1a6f7a3f9b334e773daa3543ce879ea533317c3a7
+
+# Every action is named by the commit of its release, with the release after it.
 jobs:
   plan:
     name: What to build
     runs-on: ubuntu-latest
     outputs:
-      configured: ${{ steps.plan.outputs.configured }}
+      state: ${{ steps.plan.outputs.state }}
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
+      # The state is "manuscript", "copy" or "template" (matrix() in scripts/configure.py).
       # A manuscript whose author has deleted the template's scripts still builds:
       # without the script, there is the manuscript and nothing else to compile.
       - name: List what to build
         id: plan
+        env:
+          IS_TEMPLATE: ${{ github.event.repository.is_template }}
         run: |
           if [ -f scripts/configure.py ]; then
             python3 scripts/configure.py --matrix >> "$GITHUB_OUTPUT"
           else
-            echo 'configured=true' >> "$GITHUB_OUTPUT"
+            echo 'state=manuscript' >> "$GITHUB_OUTPUT"
             echo 'matrix=[{"name":"Manuscript","slug":"manuscript","journal":"","type":"","configure":false}]' >> "$GITHUB_OUTPUT"
           fi
           cat "$GITHUB_OUTPUT"
+          if grep -q '^state=copy$' "$GITHUB_OUTPUT"; then
+            echo "::notice title=Not configured yet::This copy has no journal and article type yet, so the build compiles main.tex and title_page.tex as they came. To choose them: Actions, Configure manuscript, Run workflow."
+          fi
 
+  # Only in the template.
   tests:
     name: Tests
     needs: plan
-    if: needs.plan.outputs.configured == 'false'
+    if: needs.plan.outputs.state == 'template'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -76,7 +96,7 @@ jobs:
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -93,16 +113,17 @@ jobs:
           RSNA_DESCRIPTION: Written by the build, to check that this skeleton compiles.
         run: python3 scripts/configure.py
 
-      # TeX Live in a container. RSNA_PDF_ONLY=1 leaves out the HTML copy that latexmkrc
-      # makes for authors after the PDF: the check needs the PDFs alone.
+      # TeX Live in a container. RSNA_HTML=0: the PDFs alone, even where an author has set
+      # latexmkrc to make the HTML copy at every build (the job "word" makes that copy).
       - name: Compile with LuaLaTeX
-        uses: xu-cheng/latex-action@4.1.0
+        uses: xu-cheng/latex-action@6549dc21effb2730855a1281407ecfcececc6c1b # 4.1.0
         with:
+          docker_image: ${{ env.TEXLIVE_IMAGE }}
           root_file: |
             main.tex
             title_page.tex
           latexmk_use_lualatex: true
-          pre_compile: export RSNA_PDF_ONLY=1
+          pre_compile: export RSNA_HTML=0
 
       - name: Check that both PDFs were made
         run: |
@@ -130,7 +151,7 @@ jobs:
           grep -h "rsnafont:" main.log title_page.log || echo "Times New Roman was found on this machine"
 
       - name: Keep the PDFs
-        uses: actions/upload-artifact@v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pdf-${{ matrix.slug }}
           path: |
@@ -138,31 +159,35 @@ jobs:
             title_page.pdf
           if-no-files-found: error
 
-  # Only in a manuscript: the HTML copy of the manuscript that opens in Microsoft Word, for
-  # the journals that take the text as a Word file. It is made by the same latexmkrc an
-  # author runs on a laptop (lwarp, as in the template this one descends from). The PDFs
-  # above are the check; this copy comes on top, and a failure here does not fail the run.
+  # In a manuscript, and in the template for the skeleton it ships: the HTML copy of the
+  # manuscript that opens in Microsoft Word, for the journals that take the text as a Word
+  # file. It is made by the same latexmkrc an author runs on a laptop (lwarp, as in the
+  # template this one descends from), which makes the copy when RSNA_HTML=1 asks for it.
+  # In a manuscript the PDFs above are the check and this copy comes on top: a failure here
+  # does not fail the run. In the template it does.
   word:
     name: HTML copy for Microsoft Word
     needs: plan
-    if: needs.plan.outputs.configured == 'true'
+    if: needs.plan.outputs.state != 'copy'
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: ${{ needs.plan.outputs.state != 'template' }}
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
 
-      # No RSNA_PDF_ONLY here: after the PDF, latexmkrc makes the HTML copy. lwarp needs
-      # the poppler tools (pdftotext, pdftocairo) for that.
+      # After the PDF, latexmkrc makes the HTML copy. lwarp needs the poppler tools
+      # (pdftotext, pdftocairo) for that.
       - name: Compile with LuaLaTeX, then make the HTML copy
-        uses: xu-cheng/latex-action@4.1.0
+        uses: xu-cheng/latex-action@6549dc21effb2730855a1281407ecfcececc6c1b # 4.1.0
         with:
+          docker_image: ${{ env.TEXLIVE_IMAGE }}
           root_file: main.tex
           latexmk_use_lualatex: true
           extra_system_packages: poppler-utils
+          pre_compile: export RSNA_HTML=1
 
       - name: Check that the HTML copy was made
         run: |
@@ -173,7 +198,7 @@ jobs:
           ls -l main.html
 
       - name: Keep the HTML copy
-        uses: actions/upload-artifact@v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: word-manuscript
           path: |
@@ -183,29 +208,35 @@ jobs:
             main-images/
           if-no-files-found: error
 
-  # Only in the template: "latexmk" with no file name and no option, the command the README
-  # gives for a laptop, on the skeleton the template ships. latexmkrc names the engine and
-  # the two documents; the step after it finds both PDFs made and has nothing left to do.
+  # Only in the template: the two commands the README gives for a laptop, on the skeleton
+  # the template ships. "latexmk" with no file name and no option: latexmkrc names the
+  # engine and the two documents, and makes no HTML copy. Then the same command with
+  # RSNA_HTML=1, which makes the HTML copy. The step after them finds both PDFs made and
+  # has nothing left to do.
   laptop:
     name: latexmk with no file name, as on a laptop
     needs: plan
-    if: needs.plan.outputs.configured == 'false'
+    if: needs.plan.outputs.state == 'template'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
 
       - name: Run latexmk
-        uses: xu-cheng/latex-action@4.1.0
+        uses: xu-cheng/latex-action@6549dc21effb2730855a1281407ecfcececc6c1b # 4.1.0
         with:
+          docker_image: ${{ env.TEXLIVE_IMAGE }}
           root_file: title_page.tex
           latexmk_use_lualatex: true
+          extra_system_packages: poppler-utils
           pre_compile: |
-            export RSNA_PDF_ONLY=1
             latexmk --interaction=nonstopmode --halt-on-error
             test -s main.pdf
             test -s title_page.pdf
             test -s main.acr
+            test ! -e main.html
+            RSNA_HTML=1 latexmk --interaction=nonstopmode --halt-on-error
+            test -s main.html

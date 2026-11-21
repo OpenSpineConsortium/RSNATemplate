@@ -11,7 +11,7 @@ It is compiled with LuaLaTeX. The figures and tables go to the end, the pages ca
 
 ### 1. On GitHub
 
-1. On the front page of this repository press **Use this template**, then **Create a new repository**. A manuscript usually wants a private repository.
+1. On the front page of this repository press **Use this template**, then **Create a new repository**. A manuscript usually wants a private repository. The new repository builds once by itself (one small run of **Build**, the skeleton as it came); you need not wait for it.
 2. In the new repository open **Actions**, choose **Configure manuscript** in the list on the left, and press **Run workflow**. Choose the journal and the article type, type the title and a short description, and press **Run workflow**.
 3. The run rewrites `main.tex`, `title_page.tex` and `README.md` for that journal and article type, commits them, and builds the first PDFs. Open the run and download the PDFs under **Artifacts**.
 
@@ -19,25 +19,32 @@ After that, every push builds the PDFs again (Actions, the latest run of **Build
 
 The same run keeps an HTML copy of the manuscript, for the journals that take the text as a Word file: download the artifact `word-manuscript`, unpack it, open `main.html` in Microsoft Word and save it as a Word document. The copy is made by lwarp, as in the template this one descends from. It carries the text, the tables, the references and the list of abbreviations. How Word shows it has not been checked here: read it through before you upload it.
 
-The article type must be one the journal takes. The list holds the names of all six journals together; if the journal you chose does not take the type you chose, the run stops and lists the types it takes. Nothing is written in that case.
+The article type must be one the journal takes. The list holds the names of all six journals together; if the journal you chose does not take the type you chose, the run stops, and its page lists the types that journal takes. Nothing is written in that case.
 
 ### 2. On a laptop, with one command
 
     python scripts/configure.py --journal "Radiology: Artificial Intelligence" --type "Original Research" --title "Your title" --description "One or two sentences about the manuscript"
 
-in a clone of your copy, then commit and push. Python 3.8 or later is all it needs. `python scripts/configure.py --list` prints the journals and their article types.
+in a clone of your copy, then commit and push. The command is `python` on Windows and `python3` on macOS and Linux. Python 3.8 or later is all it needs. `python scripts/configure.py --list` prints the journals and their article types.
 
 To compile on the laptop (TeX Live or MiKTeX with LuaLaTeX, latexmk and biber):
 
     latexmk
 
-builds `main.pdf` and `title_page.pdf`, and then makes the same HTML copy for Microsoft Word, `main.html` (lwarp needs the poppler tools `pdftotext` and `pdftocairo` for it). For the PDFs alone, set the environment variable `RSNA_PDF_ONLY=1` first.
+builds `main.pdf` and `title_page.pdf`. The HTML copy for Microsoft Word takes several more runs of LuaLaTeX, so it is made only when you ask for it:
+
+    RSNA_HTML=1 latexmk             (Linux, macOS)
+    $env:RSNA_HTML=1; latexmk       (Windows PowerShell; it stays set until you close the window)
+
+makes `main.html` after the PDFs (lwarp needs the poppler tools `pdftotext` and `pdftocairo` for it). The check of this template runs both commands on Linux. The HTML copy has not been tried on Windows or macOS; the copy that GitHub keeps is the same one.
 
 ### 3. In Overleaf
 
 Configure the repository first, in one of the two ways above. Then, in Overleaf, choose **New Project**, **Import from GitHub**, and your repository. If your Overleaf plan has no GitHub link, download the repository from GitHub as a ZIP (**Code**, **Download ZIP**) and choose **New Project**, **Upload Project**.
 
 In Overleaf's menu, set the compiler to **LuaLaTeX** (the template does not compile with pdfLaTeX) and the main document to `main.tex`. To print the full title page, set the main document to `title_page.tex` and compile once.
+
+A compile in Overleaf builds the PDF alone. No environment variable can be set there, so to have Overleaf make the HTML copy as well, change `our $rsna_html = 0;` to `our $rsna_html = 1;` in `latexmkrc`; the template this one descends from made the copy at every compile. Every compile then takes several more runs of LuaLaTeX and may reach the time limit of your Overleaf plan, so change it back afterwards. Where Overleaf keeps the copy has not been looked at here: the copy that GitHub keeps is the sure one.
 
 The check of this template runs on GitHub's machines. It has not been tried in Overleaf itself; the template it descends from was written there.
 
@@ -228,7 +235,8 @@ The journals change their instructions, and this template was not read from the 
 - `templates/`: the parts the skeletons are made from. `templates/notes/` holds the writing notes kept from the template this one descends from.
 - `python scripts/sync_workflow.py`: after a change to the data or to a template, rewrites the drop-down lists of the workflow, the table above, and `main.tex` and `title_page.tex` as the template ships them (the skeleton of Radiology: Artificial Intelligence, Original Research).
 - `python -m pytest tests`: every journal and article type generates, every limit of the data appears in its skeleton, no placeholder is left unfilled, and the three things above are in step with the data.
-- `.github/workflows/build.yml`: on every push and pull request, writes and compiles the skeleton of every journal and article type on GitHub's machines. In a repository that has been configured as a manuscript, the same workflow compiles the manuscript alone and makes its HTML copy.
+- `.github/workflows/build.yml`: on every push and pull request, writes and compiles the skeleton of every journal and article type on GitHub's machines, runs the tests and the two laptop commands above, and makes the HTML copy of the skeleton as shipped. In a copy that nobody has configured yet, the same workflow compiles `main.tex` and `title_page.tex` as they came, in one job. In a repository that has been configured as a manuscript, it compiles the manuscript alone and makes its HTML copy.
+- TeX Live and the actions are fixed, so that a build does not change by itself: `TEXLIVE_IMAGE` at the top of `build.yml` names one TeX Live image by its date and its digest, and every action is named by the commit of its release. To move to a newer TeX Live, change that one line; the comment above it says where the images are listed.
 
 ## Credit
 

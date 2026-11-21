@@ -266,6 +266,36 @@ def test_the_kept_notes_go_where_they_hold(rendered):
     assert "Typically contains background information" not in rendered["radiology--letter"]["main.tex"]
 
 
+def test_the_full_title_page_follows_what_was_read(rendered):
+    wide = DATA["rsna_wide"]["data_sharing_statement"]
+    for pair_id, (journal, _) in zip(IDS, PAIRS):
+        title_page = rendered[pair_id]["title_page.tex"]
+        statements = journal["journal_level"]["statements"]
+        # disclosures: laid out, unless what was read places them in the cover letter;
+        # there the line is kept as a comment
+        elsewhere = "cover letter" in (configure.words(statements["disclosures"]["value"]) or "").lower()
+        assert ("\n%\\textbf{Disclosures}: TODO\n" in title_page) == elsewhere, pair_id
+        assert ("\n\\textbf{Disclosures}: TODO\n" in title_page) == (not elsewhere), pair_id
+        # data sharing: the line read for all RSNA journals stands only where it says
+        # something the journal's own line does not
+        if "pubs.rsna.org" in journal["instructions_url"]:
+            same = wide["value"] == statements["data_sharing"]["value"]
+            assert flat(title_page).count("RSNA journals: ") == (0 if same else 1), pair_id
+            assert wide["official_page"] in title_page, pair_id
+        else:
+            assert "RSNA journals: " not in flat(title_page), pair_id
+    for pair_id, laid_out in (
+        ("radiology-ai--original-research", False),
+        ("radiology--original-research", False),
+        ("radiology-cardiothoracic--original-research", True),
+        ("radiology-advances--original-research", True),
+    ):
+        assert ("\n\\textbf{Disclosures}: TODO\n" in rendered[pair_id]["title_page.tex"]) == laid_out, pair_id
+    radiology = flat(rendered["radiology--original-research"]["title_page.tex"])
+    own = configure.words(DATA["journals"][1]["journal_level"]["statements"]["data_sharing"]["value"])
+    assert DATA["journals"][1]["key"] == "radiology" and radiology.count(own) == 1, "Radiology's line stands once"
+
+
 def test_radiology_ai_original_research_is_as_read(rendered):
     main = rendered["radiology-ai--original-research"]["main.tex"]
     block = flat(top_block(main))
@@ -391,8 +421,11 @@ def test_a_typed_title_cannot_break_latex_or_the_readme(tmp_path):
 
 
 def run(*arguments, **environment):
+    # what the script reads from the environment is set by each test and by nothing else:
+    # the tests give the same answers on a laptop and on GitHub's machines
     env = dict(os.environ)
-    for name in ("RSNA_JOURNAL", "RSNA_TYPE", "RSNA_TITLE", "RSNA_DESCRIPTION", "GITHUB_STEP_SUMMARY"):
+    for name in ("RSNA_JOURNAL", "RSNA_TYPE", "RSNA_TITLE", "RSNA_DESCRIPTION", "GITHUB_STEP_SUMMARY",
+                 "GITHUB_ACTIONS", "GITHUB_REPOSITORY", "TEMPLATE_REPOSITORY", "IS_TEMPLATE"):
         env.pop(name, None)
     env.update(environment)
     return subprocess.run(
@@ -431,26 +464,74 @@ def test_the_workflow_hands_the_choices_over_in_the_environment(tmp_path):
     result = run("--root", str(other), RSNA_JOURNAL="RadioGraphics", RSNA_TYPE="AI in Brief")
     assert result.returncode == 2
     assert "Manuscript (full length)" in result.stderr
+    assert "::" not in result.stdout, "off GitHub nothing is written for GitHub"
     assert list(other.iterdir()) == []
     assert run("--root", str(other)).returncode == 2, "no journal and no type is refused too"
 
 
-def test_the_matrix_is_every_pair_then_the_manuscript_alone(tmp_path):
-    def matrix():
-        result = run("--matrix", "--root", str(tmp_path))
+def test_on_github_a_refusal_stands_on_the_page_of_the_run(tmp_path):
+    summary = tmp_path / "summary.md"
+    root = tmp_path / "copy"
+    root.mkdir()
+    result = run(
+        "--root", str(root), RSNA_JOURNAL="RadioGraphics", RSNA_TYPE="AI in Brief",
+        GITHUB_ACTIONS="true", GITHUB_STEP_SUMMARY=str(summary),
+    )
+    assert result.returncode == 2
+    # one annotation: the whole refusal on one line, its line ends written as GitHub asks
+    commands = [line for line in result.stdout.split("\n") if line.startswith("::")]
+    assert len(commands) == 1
+    assert commands[0].startswith(
+        '::error title=Nothing was written::RadioGraphics has no article type "AI in Brief". It has:%0A'
+    )
+    journal = configure.find_journal(DATA, "RadioGraphics")
+    for atype in journal["article_types"]:
+        assert atype["name"] in commands[0]
+        assert "    " + atype["name"] in summary.read_text(encoding="utf-8")
+    assert list(root.iterdir()) == [], "a refusal writes nothing"
+    # what was typed cannot start a command of its own, in the annotation or in the log
+    result = run(
+        "--root", str(root), RSNA_JOURNAL="Journal of 100%\n::warning::typed", RSNA_TYPE="Original Research",
+        GITHUB_ACTIONS="true", GITHUB_STEP_SUMMARY=str(summary),
+    )
+    assert result.returncode == 2
+    commands = [line for line in (result.stdout + "\n" + result.stderr).split("\n") if line.startswith("::")]
+    assert len(commands) == 1 and commands[0].startswith(
+        '::error title=Nothing was written::Unknown journal "Journal of 100%25 ::warning::typed". The journals are:%0A'
+    )
+
+
+def test_the_matrix_is_every_pair_a_copy_as_it_came_or_the_manuscript_alone(tmp_path):
+    def matrix(**environment):
+        result = run("--matrix", "--root", str(tmp_path), **environment)
         assert result.returncode == 0, result.stderr
         lines = dict(line.split("=", 1) for line in result.stdout.strip().split("\n"))
-        return lines["configured"], json.loads(lines["matrix"])
+        assert sorted(lines) == ["matrix", "state"]
+        return lines["state"], json.loads(lines["matrix"])
 
-    configured, entries = matrix()
-    assert configured == "false"
-    assert [(entry["journal"], entry["type"]) for entry in entries] == [(j["name"], t["name"]) for j, t in PAIRS]
-    assert [entry["slug"] for entry in entries] == IDS
-    assert all(entry["configure"] is True for entry in entries)
+    template = dict(GITHUB_REPOSITORY="Someone/RSNATemplate", TEMPLATE_REPOSITORY="someone/RSNATemplate")
+    copy = dict(GITHUB_REPOSITORY="author/my-manuscript", TEMPLATE_REPOSITORY="someone/RSNATemplate")
+    # the template itself (by its name, or by its template switch) and a laptop, where no
+    # name is known: every pair, each written by the script
+    for environment in ({}, template, dict(copy, IS_TEMPLATE="true"), dict(GITHUB_REPOSITORY="author/my-manuscript")):
+        state, entries = matrix(**environment)
+        assert state == "template", environment
+        assert [(entry["journal"], entry["type"]) for entry in entries] == [(j["name"], t["name"]) for j, t in PAIRS]
+        assert [entry["slug"] for entry in entries] == IDS
+        assert all(entry["configure"] is True for entry in entries)
+    # a copy nobody has configured yet: main.tex and title_page.tex as they came, in one job
+    for environment in (copy, dict(copy, IS_TEMPLATE="false"), dict(copy, IS_TEMPLATE="")):
+        state, entries = matrix(**environment)
+        assert state == "copy", environment
+        assert len(entries) == 1 and entries[0]["configure"] is False and entries[0]["slug"] == "manuscript"
+        assert sorted(entries[0]) == ["configure", "journal", "name", "slug", "type"]
+    # configured: the manuscript alone, wherever it is
     configure.configure(DATA, tmp_path, "Radiology", "Original Research")
-    configured, entries = matrix()
-    assert configured == "true"
-    assert len(entries) == 1 and entries[0]["configure"] is False and entries[0]["slug"] == "manuscript"
+    for environment in ({}, template, copy):
+        state, entries = matrix(**environment)
+        assert state == "manuscript", environment
+        assert len(entries) == 1 and entries[0]["configure"] is False and entries[0]["slug"] == "manuscript"
+        assert entries[0]["name"] == "Radiology / Original Research"
 
 
 # ---------------------------------------------------------------------------- the workflows
@@ -490,48 +571,108 @@ def test_the_configure_workflow_is_safe():
     assert "github-actions[bot]" in text
 
 
-def test_the_actions_are_pinned_by_version():
+def test_the_actions_and_tex_live_are_pinned():
+    releases = {}
     for name in ("configure.yml", "build.yml"):
         text = configure.read(REPO / ".github" / "workflows" / name)
-        used = re.findall(r"(?m)^\s+(?:- )?uses: (\S+)", text)
+        used = re.findall(r"(?m)^\s+(?:- )?uses: (.+)$", text)
         assert used, name
         for action in used:
             if action.startswith("./"):
                 continue
-            assert re.fullmatch(r"[\w.-]+/[\w./-]+@v?\d+\.\d+\.\d+", action), "%s in %s is not pinned by version" % (action, name)
+            # the commit of a release, and the release it is, after it
+            pinned = re.fullmatch(r"([\w.-]+/[\w./-]+)@([0-9a-f]{40}) # (v?\d+\.\d+\.\d+)", action)
+            assert pinned, "%s in %s is not pinned by the commit of a release" % (action, name)
+            releases.setdefault(pinned.group(1), set()).add(pinned.group(2, 3))
+    assert all(len(pins) == 1 for pins in releases.values()), "one release of each action, everywhere"
+    # TeX Live is one image, named by its date and its digest, in every step that compiles
+    build = configure.read(REPO / ".github" / "workflows" / "build.yml")
+    assert len(re.findall(r"(?m)^  TEXLIVE_IMAGE: ghcr\.io/xu-cheng/texlive-alpine:\d{8}@sha256:[0-9a-f]{64}$", build)) == 1
+    assert build.count("docker_image: ${{ env.TEXLIVE_IMAGE }}") == build.count("uses: xu-cheng/latex-action@") == 3
+    assert "texlive_version" not in build
 
 
 def test_the_build_compiles_every_pair_and_keeps_the_pdfs():
     text = configure.read(REPO / ".github" / "workflows" / "build.yml")
     for needed in ("push:", "pull_request:", "ubuntu-latest", "configure.py --matrix", "fromJSON(needs.plan.outputs.matrix)",
-                   "python3 scripts/configure.py", "latexmk_use_lualatex: true", "RSNA_PDF_ONLY=1", "upload-artifact",
+                   "python3 scripts/configure.py", "latexmk_use_lualatex: true", "RSNA_HTML=0", "upload-artifact",
                    "main.pdf", "title_page.pdf"):
         assert needed in text, needed
     assert re.findall(r"(?m)^permissions:\n((?:  .*\n)+)", text) == ["  contents: read\n"]
+    # nothing of the event or of the matrix is pasted into a command line: no "${{" in a script
+    script_indent = None
+    for line in text.split("\n"):
+        indent = len(line) - len(line.lstrip())
+        if script_indent is not None and line.strip() and indent <= script_indent:
+            script_indent = None
+        if script_indent is not None or re.match(r"\s+(- )?(run|pre_compile): \S", line):
+            assert "${{" not in line, line
+        if re.match(r"\s+(- )?(run|pre_compile): \|$", line):
+            script_indent = indent
+
     def job(name):
         start = text.index("\n  %s:\n" % name)
         following = re.search(r"\n  [a-z]+:\n", text[start + 1:])
         return text[start:start + 1 + following.start()] if following else text[start:]
 
-    # the check of the template compiles the PDFs alone; the tests run there too, and so
-    # does latexmk with no file name, the command the README gives for a laptop
-    pdf = job("pdf")
-    assert "export RSNA_PDF_ONLY=1" in pdf
-    assert "needs.plan.outputs.configured == 'false'" in job("tests")
+    # The job "plan" tells three states apart, in the words of matrix() in the script: the
+    # template, a copy nobody has configured yet, a manuscript. Both workflows name the
+    # same template.
+    plan = job("plan")
+    assert "state: ${{ steps.plan.outputs.state }}" in plan
+    assert "IS_TEMPLATE: ${{ github.event.repository.is_template }}" in plan
+    assert "echo 'state=manuscript' >> \"$GITHUB_OUTPUT\"" in plan, "a manuscript without the scripts still builds"
+    assert "grep -q '^state=copy$' \"$GITHUB_OUTPUT\"" in plan and "::notice " in plan
+    named = [
+        re.findall(r"(?m)^  TEMPLATE_REPOSITORY: (\S+)$", configure.read(REPO / ".github" / "workflows" / name))
+        for name in ("build.yml", "configure.yml")
+    ]
+    assert len(named[0]) == 1 and named[0] == named[1]
+    # A copy nobody has configured yet gets the job of the PDFs and no other: the first
+    # commit of a new copy does not start the template's own check.
+    conditions = {name: re.findall(r"(?m)^    if: (.+)$", job(name)) for name in ("plan", "tests", "pdf", "word", "laptop")}
+    assert conditions == {
+        "plan": [],
+        "tests": ["needs.plan.outputs.state == 'template'"],
+        "pdf": [],
+        "word": ["needs.plan.outputs.state != 'copy'"],
+        "laptop": ["needs.plan.outputs.state == 'template'"],
+    }
+    # the check of the PDFs compiles the PDFs alone, whatever latexmkrc says
+    assert "pre_compile: export RSNA_HTML=0" in job("pdf")
+    # in the template: the two commands the README gives for a laptop. "latexmk" with no
+    # file name makes the PDFs and no HTML copy; with RSNA_HTML=1 it makes the HTML copy
     laptop = job("laptop")
-    assert "needs.plan.outputs.configured == 'false'" in laptop
-    assert "\n            latexmk --interaction=nonstopmode --halt-on-error\n" in laptop
+    assert (
+        "\n          pre_compile: |\n"
+        "            latexmk --interaction=nonstopmode --halt-on-error\n"
+        "            test -s main.pdf\n"
+        "            test -s title_page.pdf\n"
+        "            test -s main.acr\n"
+        "            test ! -e main.html\n"
+        "            RSNA_HTML=1 latexmk --interaction=nonstopmode --halt-on-error\n"
+        "            test -s main.html\n"
+    ) in laptop
+    assert "poppler-utils" in laptop
     assert "@default_files = ('main.tex', 'title_page.tex');" in configure.read(REPO / "latexmkrc")
-    # in a manuscript, and only there, a second job keeps the HTML copy; it cannot fail the run
+    # the HTML copy is kept in a manuscript and in the template; only in a manuscript does
+    # its failure leave the run green
     word = job("word")
-    assert "needs.plan.outputs.configured == 'true'" in word and "continue-on-error: true" in word
-    assert "RSNA_PDF_ONLY" not in "\n".join(line for line in word.split("\n") if not line.strip().startswith("#"))
+    assert "continue-on-error: ${{ needs.plan.outputs.state != 'template' }}" in word
+    assert "pre_compile: export RSNA_HTML=1" in word
     assert "main.html" in word and "poppler-utils" in word
+    # latexmkrc makes the HTML copy only when it is asked for, and calls every program
+    # without a shell, so that the same lines run on Windows
     latexmkrc = configure.read(REPO / "latexmkrc")
-    assert "RSNA_PDF_ONLY" in latexmkrc and "lwarpmk html" in latexmkrc, "the HTML copy stays for authors"
-    assert "biber output" in latexmkrc, "the line written for Overleaf stays"
-    assert "system('biber', $html)" in latexmkrc and "htmlglossary" in latexmkrc
-    assert "$? = $build" in latexmkrc, "the HTML steps do not replace the result of the PDF build"
+    code = "\n".join(line for line in latexmkrc.split("\n") if not line.lstrip().startswith("#"))
+    assert "\nour $rsna_html = 0;\n" in latexmkrc, "the HTML copy is made only when it is asked for"
+    assert "$ENV{RSNA_HTML}" in code and "RSNA_PDF_ONLY" not in latexmkrc
+    assert "system('lwarpmk', 'pdftosvg', glob('*.pdf'));" in code
+    assert code.count("system('lwarpmk', 'html');") == 1 and code.count("system('lwarpmk', 'html1');") == 1
+    assert "system('biber', 'output');" in code, "the line written for Overleaf stays"
+    assert "system('biber', $html)" in code and "system('lwarpmk', 'htmlglossary');" in code
+    assert not re.search(r"system\s*\(?\s*'[^']*[ ;|&][^']*'", code), "a call that needs a shell"
+    assert "$? = $build" in code, "the HTML steps do not replace the result of the PDF build"
     font = configure.read(REPO / "rsnafont.tex")
     assert "\\IfFontExistsTF{Times New Roman}" in font and "\\setmainfont{Times New Roman}" in font
     assert "texgyretermes" in font
@@ -552,7 +693,14 @@ def test_the_readme_of_the_template_says_what_it_must():
     assert "It is not made, checked or endorsed by the RSNA" in readme
     assert "Use this template" in readme and "Configure manuscript" in readme and "Run workflow" in readme
     assert "python scripts/configure.py --journal" in readme
+    assert "`python3` on macOS and Linux" in readme
     assert "Overleaf" in readme and "Import from GitHub" in readme
+    # the HTML copy is asked for, in the words latexmkrc reads; the old switch is gone
+    for text in (readme, configure.read(REPO / "templates" / "README.md.in")):
+        assert "    RSNA_HTML=1 latexmk" in text and "$env:RSNA_HTML=1; latexmk" in text
+        assert "`our $rsna_html = 0;` to `our $rsna_html = 1;`" in text
+        assert "RSNA_PDF_ONLY" not in text
+        assert "`python3` on macOS and Linux" in text
     assert "check every limit" in readme
     assert "https://github.com/cai4cai/RSNATemplate" in readme
     for journal in DATA["journals"]:

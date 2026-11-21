@@ -197,7 +197,7 @@ def find_journal(data, name):
             return journal
     raise Refused(
         'Unknown journal "%s". The journals are:\n%s'
-        % (name or "", "\n".join("    " + other for other in journal_names(data)))
+        % (clean_line(name), "\n".join("    " + other for other in journal_names(data)))
     )
 
 
@@ -217,7 +217,7 @@ def find_type(data, journal, name):
         return matches[0]
     raise Refused(
         '%s has no article type "%s". It has:\n%s'
-        % (journal["name"], name or "", "\n".join("    " + atype["name"] for atype in types))
+        % (journal["name"], clean_line(name), "\n".join("    " + atype["name"] for atype in types))
     )
 
 
@@ -701,10 +701,28 @@ def render_title_page(data, journal, atype, title):
         "% The letters in [brackets] say how sure a line is: see the top of main.tex.",
         RULE,
     ]
+    # Disclosures: laid out on this page unless what was read names another place for them
+    # (the cover letter). There the line stays as a comment, for the author to uncomment.
+    disclosures = [comment("Disclosures: " + said(statements["disclosures"]))]
+    line = "\\textbf{Disclosures}: TODO"
+    if "cover letter" in (words(statements["disclosures"].get("value")) or "").lower():
+        disclosures += [
+            "% As read, they go in the cover letter. If the journal's page asks for them on this page",
+            "% as well, uncomment the next line.",
+            "%" + line,
+        ]
+    else:
+        disclosures += [
+            "% If the journal wants them somewhere else (the cover letter, a form of its own), delete the next line.",
+            line,
+        ]
+    # Data sharing: the journal's own line, then the line read for all RSNA journals where
+    # it says something else (for Radiology the two are one and the same fact).
     sharing = [comment("Data sharing: " + said(statements["data_sharing"]))]
     wide = data.get("rsna_wide", {}).get("data_sharing_statement")
     if wide and "pubs.rsna.org" in journal["instructions_url"]:
-        sharing.append(comment("RSNA journals: " + said(wide)))
+        if wide.get("value") != statements["data_sharing"].get("value"):
+            sharing.append(comment("RSNA journals: " + said(wide)))
         if wide.get("official_page"):
             sharing.append("% The sentences to choose from are on this page: " + wide["official_page"])
     values = {
@@ -717,8 +735,7 @@ def render_title_page(data, journal, atype, title):
             % (said(atype["body_word_limit"]), said(atype["body_words_count"]))
         ),
         "funding_note": comment("Funding: " + said(statements["funding"])),
-        "disclosures_note": comment("Disclosures: " + said(statements["disclosures"]))
-        + "\n% If the journal wants them somewhere else (the cover letter, a form of its own), delete the next line.",
+        "disclosures": "\n".join(disclosures),
         "data_sharing_note": "\n".join(sharing),
     }
     return fill(read(TEMPLATES / "title_page.tex.in"), values)
@@ -849,11 +866,24 @@ def configure(data, root, journal_name, type_name, title=None, description=None,
     return state
 
 
-def matrix(data, root):
-    """What the build compiles: the manuscript once configured, every pair before that."""
+def matrix(data, root, repository=None, template=None, is_template=False):
+    """What the build compiles, and which of three states the repository is in.
+
+    "manuscript"  configured (manuscript.json is there): the manuscript alone.
+    "copy"        a copy of the template that nobody has configured yet: main.tex and
+                  title_page.tex as they came, in one job. Without this state the first
+                  commit of every new copy would compile all the journals, which is the
+                  template's own check and none of the copy's business.
+    "template"    the template itself (it has the template's name, or its template switch is
+                  on), and any place where the name of the repository is not known (a
+                  laptop): every journal and article type.
+
+    repository is the name the build runs in (GITHUB_REPOSITORY), template the name of
+    the template (TEMPLATE_REPOSITORY in the workflow), is_template the template switch.
+    """
     state = load_state(root)
     if state:
-        entries = [
+        return "manuscript", [
             {
                 "name": "%s / %s" % (state["journal"], state["article_type"]),
                 "slug": "manuscript",
@@ -862,18 +892,42 @@ def matrix(data, root):
                 "configure": False,
             }
         ]
-    else:
-        entries = [
+    if repository and template and repository.lower() != template.lower() and not is_template:
+        return "copy", [
             {
-                "name": "%s / %s" % (journal["name"], atype["name"]),
-                "slug": "%s--%s" % (journal["key"], atype["key"]),
-                "journal": journal["name"],
-                "type": atype["name"],
-                "configure": True,
+                "name": "Not configured yet: the skeleton as it came",
+                "slug": "manuscript",
+                "journal": "",
+                "type": "",
+                "configure": False,
             }
-            for journal, atype in pairs(data)
         ]
-    return bool(state), entries
+    return "template", [
+        {
+            "name": "%s / %s" % (journal["name"], atype["name"]),
+            "slug": "%s--%s" % (journal["key"], atype["key"]),
+            "journal": journal["name"],
+            "type": atype["name"],
+            "configure": True,
+        }
+        for journal, atype in pairs(data)
+    ]
+
+
+def tell_github(refusal, env):
+    """On GitHub, put a refusal where a person looks: on the page of the run.
+
+    Without this the page says only that the step ended with exit code 2, and the reason
+    stands in the step's log alone. The annotation is one workflow command, so its line
+    ends and percent signs are written the way GitHub asks. The summary takes it whole.
+    """
+    if env.get("GITHUB_ACTIONS") == "true":
+        escaped = refusal.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print("::error title=Nothing was written::%s" % escaped)
+    summary = env.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as handle:
+            handle.write("**Nothing was written.**\n\n```text\n%s\n```\n" % refusal.replace("`", "'"))
 
 
 def main(argv=None):
@@ -902,8 +956,14 @@ def main(argv=None):
         print(list_choices(data))
         return 0
     if args.matrix:
-        configured, entries = matrix(data, args.root)
-        print("configured=%s" % ("true" if configured else "false"))
+        state, entries = matrix(
+            data,
+            args.root,
+            repository=env.get("GITHUB_REPOSITORY"),
+            template=env.get("TEMPLATE_REPOSITORY"),
+            is_template=str(env.get("IS_TEMPLATE") or "").strip().lower() == "true",
+        )
+        print("state=%s" % state)
         print("matrix=%s" % json.dumps(entries, separators=(",", ":")))
         return 0
     try:
@@ -915,6 +975,7 @@ def main(argv=None):
         state = configure(data, args.root, args.journal, args.article_type, args.title, args.description, args.force)
     except Refused as refusal:
         print("Refused: %s" % refusal, file=sys.stderr)
+        tell_github(str(refusal), env)
         return 2
     report = ["Configured: %s, %s" % (state["journal"], state["article_type"]), "Title: %s" % state["title"]]
     report += ["Wrote %s" % name for name in OUTPUTS + (STATE_FILE,)]

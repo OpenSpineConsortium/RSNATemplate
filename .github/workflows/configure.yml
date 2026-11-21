@@ -100,11 +100,13 @@ jobs:
             exit 1
           fi
 
+      # The action is named by the commit of its release, with the release after it.
       - name: Check out the repository
-        uses: actions/checkout@v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # What was typed in the form reaches the script as environment variables.
-      # It is never pasted into a command line.
+      # It is never pasted into a command line. If the journal does not take the article
+      # type, the script writes nothing and says why on the page of the run.
       - name: Write main.tex, title_page.tex and README.md
         env:
           RSNA_JOURNAL: ${{ inputs.journal }}

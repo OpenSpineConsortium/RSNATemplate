@@ -33,7 +33,7 @@ The same lines, and the ones that hold for every article type of the journal (ti
 
 ## Build
 
-On GitHub: every push builds `main.pdf` and `title_page.pdf`. Open Actions, the latest run of "Build", and download the PDFs under Artifacts.
+On GitHub: every push builds `main.pdf` and `title_page.pdf`. Open Actions, the latest run of "Build", and download the PDFs under Artifacts. The build uses one fixed TeX Live, the image named by `TEXLIVE_IMAGE` at the top of `.github/workflows/build.yml`: it does not change until you change that line.
 
 For a journal that takes the text as a Word file, the same run keeps an HTML copy of the manuscript: download the artifact `word-manuscript`, unpack it, open `main.html` in Microsoft Word and save it as a Word document. The copy is made by lwarp. It carries the text, the tables, the references and the list of abbreviations; how Word shows it has not been checked by the template, so read it through before you upload it.
 
@@ -41,21 +41,23 @@ On a laptop with TeX Live or MiKTeX (LuaLaTeX, latexmk, biber):
 
     latexmk
 
-builds both PDFs and then makes the same HTML copy, `main.html` (lwarp needs the poppler tools `pdftotext` and `pdftocairo` for it). For the PDFs alone, set `RSNA_PDF_ONLY=1` first:
+builds both PDFs. The HTML copy takes several more runs of LuaLaTeX, so it is made only when you ask for it:
 
-    RSNA_PDF_ONLY=1 latexmk             (Linux, macOS)
-    $env:RSNA_PDF_ONLY=1; latexmk       (Windows PowerShell)
+    RSNA_HTML=1 latexmk             (Linux, macOS)
+    $env:RSNA_HTML=1; latexmk       (Windows PowerShell; it stays set until you close the window)
+
+makes `main.html` after the PDFs (lwarp needs the poppler tools `pdftotext` and `pdftocairo` for it). The template checks both commands on Linux; the HTML copy has not been tried on Windows or macOS, and the copy that GitHub keeps is the same one.
 
 The font is Times New Roman where it is installed, and TeX Gyre Termes, a free font of the same shape that every TeX Live has, where it is not.
 
-In Overleaf: New Project, Import from GitHub, this repository (or download it as a ZIP and use Upload Project). In Overleaf's menu, set the compiler to LuaLaTeX (the manuscript does not compile with pdfLaTeX) and the main document to `main.tex`. To print the full title page, set the main document to `title_page.tex` and compile once.
+In Overleaf: New Project, Import from GitHub, this repository (or download it as a ZIP and use Upload Project). In Overleaf's menu, set the compiler to LuaLaTeX (the manuscript does not compile with pdfLaTeX) and the main document to `main.tex`. To print the full title page, set the main document to `title_page.tex` and compile once. A compile in Overleaf builds the PDF alone; to have Overleaf make the HTML copy as well, change `our $rsna_html = 0;` to `our $rsna_html = 1;` in `latexmkrc`, and change it back once you have the copy, because every compile then takes several more runs of LuaLaTeX and may reach the time limit of your Overleaf plan. The template has not been tried in Overleaf.
 
 ## Another journal or article type
 
     python scripts/configure.py --list
     python scripts/configure.py --journal "<<journal>>" --type "<<article_type>>" --title "..." --description "..."
 
-or Actions, "Configure manuscript", Run workflow. A file you have edited since the last configuration is never written over: the run stops and names it, unless you add `--force` on a laptop.
+(`python` on Windows, `python3` on macOS and Linux), or Actions, "Configure manuscript", Run workflow. A file you have edited since the last configuration is never written over: the run stops and names it, unless you add `--force` on a laptop.
 
 ## Credit
 
