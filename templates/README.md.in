@@ -64,7 +64,7 @@ In Overleaf: New Project, Import from GitHub, this repository (or download it as
     python scripts/configure.py --list
     python scripts/configure.py --journal "<<journal>>" --type "<<article_type>>" --title "..." --description "..."
 
-(`python` on Windows, `python3` on macOS and Linux), or Actions, "Configure manuscript", Run workflow. A file you have edited since the last configuration is never written over: the run stops and names it, unless you add `--force` on a laptop.
+(`python` on Windows, `python3` on macOS and Linux), or the form: Issues, New issue, "Configure the manuscript"; or Actions, "Configure manuscript", Run workflow. A file you have edited since the last configuration is never written over: the run stops and names it, unless you add `--force` on a laptop.
 
 ## Credit
 

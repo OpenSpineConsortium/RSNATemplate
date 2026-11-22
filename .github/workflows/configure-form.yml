@@ -1,0 +1,146 @@
+# Configures the manuscript from the form "Configure the manuscript"
+# (.github/ISSUE_TEMPLATE/configure-manuscript.yml). Submitting the form opens an issue
+# whose text holds the answers; this workflow reads them when the issue is opened, and again
+# when its text is edited, so a wrong choice is put right by editing the issue.
+#
+#   1. "Read the form": scripts/issue_form.py reads the answers and checks them the way
+#      scripts/configure.py does, writing nothing. Only a person who can write to this
+#      repository may configure it (the issue's author: their association with the
+#      repository and their permission on it). If the journal does not take the article
+#      type, or anything else is wrong, it answers on the issue with the reason, and the
+#      run ends there: nothing is written.
+#   2. "Configure": the same steps as Actions, "Configure manuscript", Run workflow: this
+#      job calls configure.yml, which writes the files, commits them as the Actions bot and
+#      builds the first PDF in the same run (a commit made by a workflow starts no other
+#      workflow, so the build would not happen otherwise).
+#   3. "Answer": says on the issue what was done, with links to the commit and the PDF, and
+#      closes it, and the "Set up this manuscript" issue with it. If the run did not
+#      finish, it says so, and the issue stays open.
+#
+# In the template itself (its template switch is on) nothing runs: the job is skipped.
+# The issue's text is untrusted: it reaches the script in an environment variable and is
+# never pasted into a command line.
+name: Configure from the form
+
+on:
+  issues:
+    types: [opened, edited]
+
+# Each job asks for the permissions it needs, and the workflow gives none of its own.
+permissions: {}
+
+concurrency:
+  group: configure-form-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Read the form
+    # Not in the template; only an open issue that holds the form's two drop-downs; on an
+    # edit, only when the text changed (a new title alone changes nothing).
+    if: >-
+      github.event.repository.is_template == false
+      && github.repository != 'OpenSpineConsortium/RSNATemplate'
+      && github.event.issue.state == 'open'
+      && contains(github.event.issue.body, '### Journal')
+      && contains(github.event.issue.body, '### Article type')
+      && (github.event.action == 'opened' || github.event.changes.body != null)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    outputs:
+      go: ${{ steps.form.outputs.go }}
+      journal: ${{ steps.form.outputs.journal }}
+      article_type: ${{ steps.form.outputs.article_type }}
+      title: ${{ steps.form.outputs.title }}
+      description: ${{ steps.form.outputs.description }}
+    steps:
+      # The action is named by the commit of its release, with the release after it.
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the answers, and who sent them
+        id: form
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          RSNA_ISSUE_BODY: ${{ github.event.issue.body }}
+          RSNA_AUTHOR: ${{ github.event.issue.user.login }}
+          RSNA_ASSOCIATION: ${{ github.event.issue.author_association }}
+        run: |
+          reply="$RUNNER_TEMP/reply.md"
+          if [ ! -f scripts/issue_form.py ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "This repository no longer holds the scripts that write a manuscript (the folder scripts/), so the form cannot configure it. Nothing was done." > "$reply"
+            gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$reply"
+            exit 0
+          fi
+          RSNA_PERMISSION="$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${RSNA_AUTHOR}/permission" --jq '.permission' 2>/dev/null || echo none)"
+          export RSNA_PERMISSION
+          echo "The author's association: ${RSNA_ASSOCIATION}; permission: ${RSNA_PERMISSION}"
+          python3 scripts/issue_form.py read --reply "$reply"
+          if [ -s "$reply" ]; then
+            gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$reply"
+            cat "$reply" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  configure:
+    name: Configure
+    needs: check
+    if: needs.check.outputs.go == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/configure.yml
+    with:
+      journal: ${{ needs.check.outputs.journal }}
+      article_type: ${{ needs.check.outputs.article_type }}
+      title: ${{ needs.check.outputs.title }}
+      description: ${{ needs.check.outputs.description }}
+
+  answer:
+    name: Answer on the issue
+    needs: [check, configure]
+    if: always() && needs.check.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Say what was done, and close the issue when it is done
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          RESULT: ${{ needs.configure.result }}
+          RSNA_COMMIT: ${{ needs.configure.outputs.commit }}
+          RSNA_JOURNAL: ${{ needs.check.outputs.journal }}
+          RSNA_TYPE: ${{ needs.check.outputs.article_type }}
+        run: |
+          reply="$RUNNER_TEMP/reply.md"
+          if [ "$RESULT" != "success" ]; then
+            python3 scripts/issue_form.py failed > "$reply"
+            gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$reply"
+            echo "::error::The manuscript was not configured: the job Configure ended with '${RESULT}'."
+            exit 1
+          fi
+          RSNA_ARTIFACT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "pdf-manuscript") | .id' | head -n 1 || true)"
+          export RSNA_ARTIFACT
+          python3 scripts/issue_form.py done > "$reply"
+          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$reply"
+          gh issue close "$ISSUE" --repo "$GITHUB_REPOSITORY" --reason completed
+          # the "Set up this manuscript" issue, if it is still open
+          gh api "repos/${GITHUB_REPOSITORY}/issues?state=open&per_page=100" --paginate \
+            --jq '.[] | {number, title, state, login: .user.login, pull: (.pull_request != null)}' > "$RUNNER_TEMP/issues.jsonl"
+          python3 scripts/issue_form.py setup-done --issue "$ISSUE" > "$RUNNER_TEMP/setup-done.md"
+          for number in $(python3 scripts/issue_form.py setup-open --issues "$RUNNER_TEMP/issues.jsonl"); do
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/setup-done.md"
+            gh issue close "$number" --repo "$GITHUB_REPOSITORY" --reason completed
+          done

@@ -1,11 +1,31 @@
 # Turns a copy of the template into the manuscript of one journal and article type.
-# Run it once in your own copy: Actions, "Configure manuscript", Run workflow.
+# Run it once in your own copy: Actions, "Configure manuscript", Run workflow. The form
+# "Configure the manuscript" (Issues, New issue) runs the same steps: its workflow,
+# configure-form.yml, calls this one with the answers of the form.
 #
 # The two lists of choices are written by scripts/sync_workflow.py from
 # journals/requirements.json; a test fails when they differ from the data.
 name: Configure manuscript
 
 on:
+  workflow_call:
+    inputs:
+      journal:
+        type: string
+        required: true
+      article_type:
+        type: string
+        required: true
+      title:
+        type: string
+        required: true
+      description:
+        type: string
+        required: false
+    outputs:
+      commit:
+        description: The commit that wrote the manuscript (empty when there was nothing new to save)
+        value: ${{ jobs.configure.outputs.commit }}
   workflow_dispatch:
     inputs:
       journal:
@@ -89,6 +109,8 @@ jobs:
   configure:
     name: Write the manuscript skeleton
     runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
     steps:
       - name: Stop if this is the template itself
         env:
@@ -116,6 +138,7 @@ jobs:
         run: python3 scripts/configure.py
 
       - name: Commit as the Actions bot
+        id: commit
         env:
           RSNA_JOURNAL: ${{ inputs.journal }}
           RSNA_TYPE: ${{ inputs.article_type }}
@@ -128,6 +151,7 @@ jobs:
           else
             git commit --message "Configure manuscript: ${RSNA_JOURNAL}, ${RSNA_TYPE}"
             git push
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
   # A commit made by a workflow does not start other workflows, so the first PDF of the

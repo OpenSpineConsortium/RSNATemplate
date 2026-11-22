@@ -7,22 +7,36 @@ Start a manuscript for an RSNA journal in a few minutes: you choose the journal 
 
 You need a GitHub account. Nothing has to be installed.
 
-1. At the top of this page press the green **Use this template** button, then **Create a new repository**. Give it a name, choose **Private**, and press **Create repository**.
-2. In your new repository open the **Actions** tab and choose **Configure manuscript** in the list on the left.
-3. Press **Run workflow** on the right and fill in the form:
+At the top of this page press the green **Use this template** button, then **Create a new repository**. Give it a name, choose **Private**, and press **Create repository**. Then choose the journal and the article type in one of two ways.
+
+### Configure it from a form
+
+1. Within a minute your new repository opens an issue by itself, **Set up this manuscript** (the **Issues** tab). Open it and press its link **Open the form**. (The same form: **Issues**, **New issue**, **Configure the manuscript**.)
+2. In the form choose the **Journal** and the **Article type** from the two lists, type the **Title of the manuscript** and, if you like, a short description. Press the green button at the bottom to create the issue.
+3. Wait a few minutes. A run writes your manuscript, builds the first PDF, answers on the issue with links to both, and closes the issue: `main.tex` (the text, with that journal's headings and word limits written in), `title_page.tex` (authors, funding, disclosures) and a `README.md` that lists what the journal asks of that article type.
+4. If the journal does not take the article type you chose, the answer lists the types it takes, and nothing is written. Edit the issue to choose one of them: the run starts again by itself.
+
+Only a person who can write to the repository can configure it.
+
+### Or from the Actions tab
+
+1. In your new repository open the **Actions** tab and choose **Configure manuscript** in the list on the left.
+2. Press **Run workflow** on the right and fill in the form:
    - **Journal**: for example `Radiology: Artificial Intelligence`
    - **Article type**: for example `Original Research`
    - **Title of the manuscript**, and a short description
 
    Then press the green **Run workflow** button under the form.
-4. Wait a few minutes until the run shows a green tick. Your repository now holds your manuscript: `main.tex` (the text, with that journal's headings and word limits written in), `title_page.tex` (authors, funding, disclosures) and a `README.md` that lists what the journal asks of that article type.
-5. To get the PDF, click the finished run and download **pdf-manuscript** under **Artifacts**, at the bottom of its page.
+3. Wait a few minutes until the run shows a green tick. Your repository now holds your manuscript, the same three files.
+4. To get the PDF, click the finished run and download **pdf-manuscript** under **Artifacts**, at the bottom of its page.
+
+**If that run ends with a red cross:** the journal you chose does not take that article type (the list shows the types of all six journals together). Click the run: it lists the types that journal takes. Run it again with one of them. Nothing was written.
+
+### Then
 
 **From then on:** write in `main.tex`. Every change you save to GitHub builds the PDF again: **Actions**, the newest **Build** run, **Artifacts**, **pdf-manuscript**.
 
-**If the run ends with a red cross:** the journal you chose does not take that article type (the list shows the types of all six journals together). Click the run: it lists the types that journal takes. Run it again with one of them. Nothing was written.
-
-**To write in Overleaf instead:** do steps 1 to 4 first, then follow [In Overleaf](#3-in-overleaf) below. Set Overleaf's compiler to **LuaLaTeX**.
+**To write in Overleaf instead:** configure the repository first, in either way, then follow [In Overleaf](#3-in-overleaf) below. Set Overleaf's compiler to **LuaLaTeX**.
 
 **Before you submit:** the limits in this template were read second-hand. Check them against the journal's own instructions.
 
@@ -38,9 +52,9 @@ It is compiled with LuaLaTeX. The figures and tables go to the end, the pages ca
 
 ### 1. On GitHub
 
-1. On the front page of this repository press **Use this template**, then **Create a new repository**. A manuscript usually wants a private repository. The new repository builds once by itself (one small run of **Build**, the skeleton as it came); you need not wait for it.
-2. In the new repository open **Actions**, choose **Configure manuscript** in the list on the left, and press **Run workflow**. Choose the journal and the article type, type the title and a short description, and press **Run workflow**.
-3. The run rewrites `main.tex`, `title_page.tex` and `README.md` for that journal and article type, commits them, and builds the first PDFs. Open the run and download the PDFs under **Artifacts**.
+1. On the front page of this repository press **Use this template**, then **Create a new repository**. A manuscript usually wants a private repository. The new repository builds once by itself (one small run of **Build**, the skeleton as it came), and opens one issue, **Set up this manuscript**, with the link to the form; you need not wait for the build.
+2. Fill in the form **Configure the manuscript** (the link in that issue, or **Issues**, **New issue**): the journal and the article type from two lists, the title, and a short description. Or, in the new repository, open **Actions**, choose **Configure manuscript** in the list on the left, press **Run workflow**, fill in the same four, and press **Run workflow**. Both run the same steps.
+3. The run rewrites `main.tex`, `title_page.tex` and `README.md` for that journal and article type, commits them, and builds the first PDFs. From the form, the run answers on the issue with links to the commit and the PDFs, closes it, and closes the setup issue too; if the journal does not take the type, it answers with the types it takes and writes nothing, and editing the issue starts it again. From Actions, open the run and download the PDFs under **Artifacts**.
 
 After that, every push builds the PDFs again (Actions, the latest run of **Build**).
 
@@ -260,7 +274,8 @@ The journals change their instructions, and this template was not read from the 
 
 - `journals/requirements.json`: the facts. Change a limit here and nowhere else.
 - `templates/`: the parts the skeletons are made from. `templates/notes/` holds the writing notes kept from the template this one descends from.
-- `python scripts/sync_workflow.py`: after a change to the data or to a template, rewrites the drop-down lists of the workflow, the table above, and `main.tex` and `title_page.tex` as the template ships them (the skeleton of Radiology: Artificial Intelligence, Original Research).
+- `python scripts/sync_workflow.py`: after a change to the data or to a template, rewrites the drop-down lists of the workflow and of the form, the form's list of which journal takes which article type, the table above, and `main.tex` and `title_page.tex` as the template ships them (the skeleton of Radiology: Artificial Intelligence, Original Research).
+- The form: `.github/ISSUE_TEMPLATE/configure-manuscript.yml` asks the questions; `.github/workflows/setup-issue.yml` opens the issue **Set up this manuscript** on the first push of a new copy (never in the template itself, once); `.github/workflows/configure-form.yml` reads a submitted form with `scripts/issue_form.py`, answers on the issue, and calls `configure.yml` for the steps themselves, so the two ways cannot drift apart. Only a person who can write to the repository can configure it, and in the template itself the form does nothing. Blank issues stay allowed: a manuscript's repository is also where its authors keep notes.
 - `python -m pytest tests`: every journal and article type generates, every limit of the data appears in its skeleton, no placeholder is left unfilled, and the three things above are in step with the data.
 - `.github/workflows/build.yml`: on every push and pull request, writes and compiles the skeleton of every journal and article type on GitHub's machines, runs the tests and the two laptop commands above, and makes the HTML copy of the skeleton as shipped. In a copy that nobody has configured yet, the same workflow compiles `main.tex` and `title_page.tex` as they came, in one job. In a repository that has been configured as a manuscript, it compiles the manuscript alone and makes its HTML copy.
 - TeX Live and the actions are fixed, so that a build does not change by itself: `TEXLIVE_IMAGE` at the top of `build.yml` names one TeX Live image by its date and its digest, and every action is named by the commit of its release. To move to a newer TeX Live, change that one line; the comment above it says where the images are listed.

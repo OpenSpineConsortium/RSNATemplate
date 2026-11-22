@@ -1,0 +1,60 @@
+# Opens one issue, "Set up this manuscript", in a new copy of the template: it says in
+# plain words what to do, with the link that opens the form "Configure the manuscript".
+#
+# "Use this template" makes the copy with one push of its own, and that push starts this
+# workflow. It opens the issue unless the manuscript is configured already (manuscript.json
+# is there) or the workflow opened the issue before, open or closed: so it opens it once.
+# Every later push to the default branch costs one short job that finds the one or the
+# other and ends. Nothing runs in the template itself (its template switch is on), in a
+# fork (a fork is made to change the template) or on any other branch. An issue opened
+# with GITHUB_TOKEN starts no workflow, so the issue itself configures nothing.
+name: Open the setup issue
+
+on:
+  push:
+
+# The job asks for the permissions it needs, and the workflow gives none of its own.
+permissions: {}
+
+concurrency:
+  group: setup-issue
+  cancel-in-progress: false
+
+jobs:
+  open:
+    name: Open the setup issue
+    if: >-
+      github.event.repository.is_template == false
+      && github.event.repository.fork == false
+      && github.repository != 'OpenSpineConsortium/RSNATemplate'
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      # The action is named by the commit of its release, with the release after it.
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Open the issue, unless the manuscript is configured or the issue was opened before
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f manuscript.json ]; then
+            echo "The manuscript is configured (manuscript.json): nothing to do."
+            exit 0
+          fi
+          if [ ! -f scripts/issue_form.py ]; then
+            echo "The scripts that write a manuscript are gone: nothing to do."
+            exit 0
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/issues?state=all&per_page=100" --paginate \
+            --jq '.[] | {number, title, state, login: .user.login, pull: (.pull_request != null)}' > "$RUNNER_TEMP/issues.jsonl"
+          python3 scripts/issue_form.py setup --issues "$RUNNER_TEMP/issues.jsonl" > "$RUNNER_TEMP/setup.md"
+          if [ ! -s "$RUNNER_TEMP/setup.md" ]; then
+            exit 0
+          fi
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$(python3 scripts/issue_form.py setup-title)" --body-file "$RUNNER_TEMP/setup.md"

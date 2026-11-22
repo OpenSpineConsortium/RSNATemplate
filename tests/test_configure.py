@@ -562,9 +562,13 @@ def test_the_configure_workflow_is_safe():
     assert len(typed) == 6
     for line in typed:
         assert re.fullmatch(r"RSNA_[A-Z]+: \$\{\{ inputs\.[a-z_]+ \}\}", line), line
+    # every other expression: the token, the branch, and the commit it made (handed to the
+    # form's workflow, which calls this one)
     for line in text.split("\n"):
         if "${{" in line and "inputs." not in line:
-            assert re.search(r"\$\{\{ github\.(token|ref_name) \}\}", line), line
+            assert re.search(
+                r"\$\{\{ (github\.(token|ref_name)|steps\.commit\.outputs\.sha|jobs\.configure\.outputs\.commit) \}\}$", line
+            ), line
     # it refuses to run in the template itself
     assert "is_template" in text and "TEMPLATE_REPOSITORY" in text and "exit 1" in text
     assert text.index("Stop if this is the template itself") < text.index("actions/checkout")
@@ -573,7 +577,9 @@ def test_the_configure_workflow_is_safe():
 
 def test_the_actions_and_tex_live_are_pinned():
     releases = {}
-    for name in ("configure.yml", "build.yml"):
+    names = sorted(path.name for path in (REPO / ".github" / "workflows").glob("*.yml"))
+    assert names == ["build.yml", "configure-form.yml", "configure.yml", "setup-issue.yml"]
+    for name in names:
         text = configure.read(REPO / ".github" / "workflows" / name)
         used = re.findall(r"(?m)^\s+(?:- )?uses: (.+)$", text)
         assert used, name
@@ -702,6 +708,12 @@ def test_the_readme_of_the_template_says_what_it_must():
     assert configure.TEMPLATE_README_MARK in readme
     assert "It is not made, checked or endorsed by the RSNA" in readme
     assert "Use this template" in readme and "Configure manuscript" in readme and "Run workflow" in readme
+    # the form first, the Actions tab as the second way, both in the quick start
+    quick = readme.split("## Quick start\n", 1)[1].split("\n## ", 1)[0]
+    assert quick.index("\n### Configure it from a form\n") < quick.index("\n### Or from the Actions tab\n")
+    assert "**Set up this manuscript**" in quick and "**Configure the manuscript**" in quick
+    assert "Only a person who can write to the repository can configure it." in quick
+    assert '"Configure the manuscript"' in configure.read(REPO / "templates" / "README.md.in")
     assert "python scripts/configure.py --journal" in readme
     assert "`python3` on macOS and Linux" in readme
     assert "Overleaf" in readme and "Import from GitHub" in readme

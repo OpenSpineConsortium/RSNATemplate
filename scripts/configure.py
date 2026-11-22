@@ -825,8 +825,11 @@ def edited(root, files, state, data):
     return names
 
 
-def configure(data, root, journal_name, type_name, title=None, description=None, force=False):
-    """Write the manuscript files into root. Returns the state that was written."""
+def configure(data, root, journal_name, type_name, title=None, description=None, force=False, dry_run=False):
+    """Write the manuscript files into root. Returns the state that was written.
+
+    dry_run: every check, nothing written (the issue form checks a choice this way first).
+    """
     root = Path(root)
     journal = find_journal(data, journal_name)
     atype = find_type(data, journal, type_name)
@@ -860,6 +863,8 @@ def configure(data, root, journal_name, type_name, title=None, description=None,
         "requirements_read_on": data["meta"]["made_on"],
         "files": {name: fingerprint(files[name]) for name in OUTPUTS},
     }
+    if dry_run:
+        return state
     for name in OUTPUTS:
         write(root / name, files[name])
     write(root / STATE_FILE, json.dumps(state, indent=2, ensure_ascii=False) + "\n")

@@ -1,0 +1,173 @@
+# The form "Configure the manuscript" (Issues, New issue). Submitting it opens an issue
+# whose text holds the answers; .github/workflows/configure-form.yml reads them and runs
+# the same steps as Actions, "Configure manuscript", Run workflow.
+#
+# The labels are the headings scripts/issue_form.py reads (QUESTIONS there). The two lists
+# of choices, and the list of which journal takes which article type, are written by
+# scripts/sync_workflow.py from journals/requirements.json; a test fails when they differ
+# from the data.
+name: Configure the manuscript
+description: Choose the journal and the article type, and type the title. A run writes the manuscript's files, builds the first PDF and answers on the issue.
+title: Configure the manuscript
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in this form to turn this repository into the manuscript of one journal and one article type. When you press the green button at the bottom, a run on GitHub writes `main.tex`, `title_page.tex` and `README.md` for your choice, saves them in this repository, builds the first PDF, answers on the issue with a link to the PDF, and closes the issue. It takes a few minutes.
+
+        Only a person who can write to this repository can configure it. If this is the template itself (OpenSpineConsortium/RSNATemplate), the form does nothing here: press **Use this template** on its front page first, and fill in the form in your own copy.
+
+        A community template, not made or endorsed by the RSNA.
+  - type: dropdown
+    id: journal
+    attributes:
+      label: Journal
+      description: The RSNA journal the manuscript is for.
+      options:
+        # BEGIN journals (written by scripts/sync_workflow.py: do not edit by hand)
+        - "Radiology: Artificial Intelligence"
+        - "Radiology"
+        - "Radiology: Cardiothoracic Imaging"
+        - "Radiology: Imaging Cancer"
+        - "RadioGraphics"
+        - "Radiology Advances"
+        # END journals
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: article_type
+    attributes:
+      label: Article type
+      description: The list holds the types of all six journals together; the list below the form says which journal takes which. If your journal does not take the type you choose, the answer on the issue lists the types it takes, and nothing is written.
+      options:
+        # BEGIN article types (written by scripts/sync_workflow.py: do not edit by hand)
+        - "Original Research"
+        - "Technical Developments"
+        - "AI in Brief"
+        - "Data Resources"
+        - "Special Report"
+        - "Review"
+        - "Editorial (Invited Commentary; Editorial Opinion)"
+        - "Letter to the Editor and Reply"
+        - "Research Letters"
+        - "Review articles"
+        - "Radiology in Focus"
+        - "How I Do It"
+        - "Best Practice"
+        - "Special Reports"
+        - "Radiology Scientific Expert Panel"
+        - "Statements/Guidelines"
+        - "Editorials"
+        - "Letters to the Editor and Replies"
+        - "Images in Radiology"
+        - "Radiology Diagnosis Please"
+        - "Radiology In Training: Perspective"
+        - "Radiology In Training: Research in Practice"
+        - "Case Reports"
+        - "Case Series"
+        - "Images in Cardiothoracic Imaging"
+        - "Editorials (invited commentary)"
+        - "Imaging Essays"
+        - "Debate"
+        - "Brief Reports"
+        - "Images in Cancer"
+        - "Editorials and Commentaries"
+        - "Manuscript (full length)"
+        - "Fundamental / Tutorial"
+        - "Update"
+        - "Commentary"
+        - "Editorial"
+        - "Statements and Guidelines"
+        - "Art of Imaging"
+        # END article types
+      default: 0
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        <details>
+        <summary>Which article types each journal takes</summary>
+
+        <!-- BEGIN pairs (written by scripts/sync_workflow.py: do not edit by hand) -->
+
+        - **Radiology: Artificial Intelligence**
+          - Original Research
+          - Technical Developments
+          - AI in Brief
+          - Data Resources
+          - Special Report
+          - Review
+          - Editorial (Invited Commentary; Editorial Opinion)
+          - Letter to the Editor and Reply
+        - **Radiology**
+          - Original Research
+          - Technical Developments
+          - Research Letters
+          - Review articles
+          - Radiology in Focus
+          - How I Do It
+          - Best Practice
+          - Special Reports
+          - Radiology Scientific Expert Panel
+          - Statements/Guidelines
+          - Editorials
+          - Letters to the Editor and Replies
+          - Images in Radiology
+          - Radiology Diagnosis Please
+          - Radiology In Training: Perspective
+          - Radiology In Training: Research in Practice
+          - Data Resources
+        - **Radiology: Cardiothoracic Imaging**
+          - Original Research
+          - Technical Developments
+          - Research Letters
+          - Review articles
+          - Case Reports
+          - Case Series
+          - Images in Cardiothoracic Imaging
+          - Editorials (invited commentary)
+          - Letters to the Editor and Replies
+          - Special Reports
+          - Imaging Essays
+          - Debate
+        - **Radiology: Imaging Cancer**
+          - Original Research
+          - Technical Developments
+          - Brief Reports
+          - Review articles
+          - Images in Cancer
+          - Editorials and Commentaries
+          - Letters to the Editor and Replies
+        - **RadioGraphics**
+          - Manuscript (full length)
+          - Fundamental / Tutorial
+          - Update
+          - Commentary
+          - Editorial
+        - **Radiology Advances**
+          - Original Research
+          - Review
+          - Statements and Guidelines
+          - Editorial
+          - Letter to the Editor and Reply
+          - Art of Imaging
+
+        <!-- END pairs -->
+
+        </details>
+  - type: input
+    id: title
+    attributes:
+      label: Title of the manuscript
+      description: It goes on the two title pages and at the top of the README. You can change it later in main.tex and title_page.tex.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Short description
+      description: One or two sentences about the manuscript, for the README of this repository. You may leave it empty.
+    validations:
+      required: false

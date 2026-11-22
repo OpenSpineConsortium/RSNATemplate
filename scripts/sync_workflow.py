@@ -6,7 +6,9 @@
 
 Three things are made from the data and kept as files:
 
-  1. the two drop-down lists of .github/workflows/configure.yml (journals; article types);
+  1. the two drop-down lists of .github/workflows/configure.yml (journals; article types),
+     and the same two lists in the form .github/ISSUE_TEMPLATE/configure-manuscript.yml,
+     with the list under them of which journal takes which article type;
   2. the table of journals, article types and limits in the template's README.md;
   3. main.tex and title_page.tex as the template ships them: the skeleton of the default
      choice, so that the template itself always compiles.
@@ -28,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import configure  # noqa: E402
 
 WORKFLOW = Path(".github") / "workflows" / "configure.yml"
+FORM = Path(".github") / "ISSUE_TEMPLATE" / "configure-manuscript.yml"
 README = Path("README.md")
 SHIPPED = ("main.tex", "title_page.tex")
 NOT_READ = "not read"
@@ -86,6 +89,22 @@ def sync_workflow(data, text):
         indent = begin[: len(begin) - len(begin.lstrip())]
         text = replace_block(text, name, [indent + "- " + json.dumps(choice, ensure_ascii=False) for choice in choices])
     return text
+
+
+def form_pairs(data, indent):
+    """The list under the form's drop-downs: each journal and the article types it takes."""
+    lines = [""]
+    for journal in data["journals"]:
+        lines.append(indent + "- **%s**" % journal["name"])
+        lines.extend(indent + "  - " + atype["name"] for atype in journal["article_types"])
+    return lines + [""]
+
+
+def sync_form(data, text):
+    """The form's two drop-down lists, as in the workflow, and the list of pairs."""
+    text = sync_workflow(data, text)
+    begin = next(row for row in text.split("\n") if re.search(r"\bBEGIN pairs\b", row))
+    return replace_block(text, "pairs", form_pairs(data, begin[: len(begin) - len(begin.lstrip())]))
 
 
 # ---------------------------------------------------------------------------- the README table
@@ -255,6 +274,8 @@ def out_of_step(root=None, data=None):
     wanted = {}
     workflow = configure.read(root / WORKFLOW)
     wanted[WORKFLOW] = sync_workflow(data, workflow)
+    if (root / FORM).exists():
+        wanted[FORM] = sync_form(data, configure.read(root / FORM))
     if configure.load_state(root) is None:
         wanted[README] = sync_readme(data, configure.read(root / README))
         default = configure.render_default(data)
