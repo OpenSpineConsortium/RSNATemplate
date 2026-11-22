@@ -39,7 +39,7 @@ body:
     id: article_type
     attributes:
       label: Article type
-      description: The list holds the types of all six journals together; the list below the form says which journal takes which. If your journal does not take the type you choose, the answer on the issue lists the types it takes, and nothing is written.
+      description: The list holds the types of all six journals together. To see which journal takes which, open "Which article types each journal takes" right under this list. If your journal does not take the type you choose, the answer on the issue lists the types it takes, and nothing is written.
       options:
         # BEGIN article types (written by scripts/sync_workflow.py: do not edit by hand)
         - "Original Research"

@@ -116,6 +116,23 @@ def test_the_form_offers_the_choices_of_the_data():
     assert sum(1 for row in listed if row.startswith("          - ")) == len(configure.pairs(DATA))
 
 
+def test_the_article_type_says_where_the_list_of_pairs_is():
+    """The list of which journal takes which type is inside the form, right under the
+    drop-down of the article types, as a part that opens when pressed."""
+    text = configure.read(FORM)
+    items = re.split(r"(?m)^  - type: ", text.split("\nbody:\n", 1)[1])[1:]
+    kinds = [item.split("\n", 1)[0] for item in items]
+    article_type = [item for item in items if "\n    id: article_type\n" in item]
+    after = items[items.index(article_type[0]) + 1]
+    assert kinds[items.index(article_type[0]) + 1] == "markdown"
+    summary = re.findall(r"<summary>(.+)</summary>", after)
+    assert summary == ["Which article types each journal takes"]
+    assert sync_workflow.block(after, "pairs"), "the list of pairs is that part"
+    description = re.findall(r"(?m)^      description: (.+)$", article_type[0])[0]
+    assert 'open "%s" right under this list' % summary[0] in description
+    assert "below the form" not in text
+
+
 def test_the_sync_writes_the_lists_of_the_form(tmp_path):
     text = configure.read(FORM)
     emptied = sync_workflow.replace_block(text, "pairs", [])
