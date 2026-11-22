@@ -122,9 +122,14 @@ jobs:
             exit 1
           fi
 
-      # The action is named by the commit of its release, with the release after it.
+      # The action is named by the commit of its release, with the release after it. It
+      # checks out the branch as it is when this job starts (a branch named, not the commit
+      # the event saw): a run of the form that waited its turn behind another saves on top
+      # of what that one saved, and git push is not refused.
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref_name }}
 
       # What was typed in the form reaches the script as environment variables.
       # It is never pasted into a command line. If the journal does not take the article

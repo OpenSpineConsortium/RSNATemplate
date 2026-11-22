@@ -474,6 +474,30 @@ def test_the_form_workflow_runs_the_configure_steps_and_is_safe():
     assert "    if: always() && needs.check.outputs.go == 'true'\n" in job(text, "answer")
 
 
+def test_two_forms_at_once_are_configured_one_after_the_other():
+    """What the check found (copy1 #4 and #5, opened together): with a group for each issue
+    both runs went at once, and the second's git push was refused. Now all the form's runs
+    of a repository share one group, and each saves on top of the branch as it is."""
+    text = configure.read(WORKFLOWS / "configure-form.yml")
+    block = text.split("\nconcurrency:\n", 1)[1].split("\n\n", 1)[0]
+    groups = re.findall(r"(?m)^  group: (.+)$", block)
+    assert groups == ["configure-form"], "one group for every run of the form: no issue number, no run"
+    assert text.count("concurrency:") == 1, "no job of the form has a group of its own"
+    # the group is the form's own: no other workflow of the repository uses it
+    for other in WORKFLOWS.glob("*.yml"):
+        if other.name != "configure-form.yml":
+            assert not re.search(r"(?m)^\s+group: configure-form\s*$", configure.read(other)), other.name
+    # the build the form calls cancels a build in progress of its own group: only one run
+    # of the form at a time builds, so it never cancels another form's first PDF
+    build = configure.read(WORKFLOWS / "build.yml")
+    assert "  group: build-${{ github.workflow }}-${{ github.event_name }}-${{ inputs.ref || github.ref }}\n" in build
+    # the jobs that read and write the files check out the branch as it is when they start
+    # (a branch named: actions/checkout fetches the event's commit only when no ref is given)
+    named = "        with:\n          ref: ${{ github.ref_name }}\n"
+    assert named in job(text, "check")
+    assert named in job(configure.read(WORKFLOWS / "configure.yml"), "configure")
+
+
 def test_the_configure_workflow_can_be_called_with_the_same_inputs():
     text = configure.read(WORKFLOWS / "configure.yml")
     call = text.split("  workflow_call:\n", 1)[1].split("  workflow_dispatch:\n", 1)[0]

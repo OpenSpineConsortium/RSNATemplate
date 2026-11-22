@@ -30,6 +30,13 @@
 # the issue holds when the run starts. Whichever run reads last reads the last text, and
 # that text is the one written and answered. (Two runs may then answer on the same text:
 # the second finds nothing new to save and says so.)
+#
+# The group is one for all the form's runs in this repository (a group belongs to its
+# repository), not one for each issue: two forms submitted at once are configured one
+# after the other, never at once, so neither pushes over the other, and the first PDF
+# that one run builds (build.yml, whose group cancels a build in progress) is never
+# cancelled by another form's run. A run that waited checks out the branch as it is when
+# its jobs start, not the commit its event saw, so it saves on top of the run before.
 name: Configure from the form
 
 on:
@@ -40,7 +47,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: configure-form-${{ github.event.issue.number }}
+  group: configure-form
   cancel-in-progress: false
   queue: max
 
@@ -70,10 +77,13 @@ jobs:
       title: ${{ steps.form.outputs.title }}
       description: ${{ steps.form.outputs.description }}
     steps:
-      # The action is named by the commit of its release, with the release after it.
+      # The action is named by the commit of its release, with the release after it. The
+      # branch as it is now (a branch named, not the event's commit): another form's run
+      # may have saved to it while this one waited.
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.ref_name }}
           persist-credentials: false
 
       - name: Read the answers, and who sent them
