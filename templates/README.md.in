@@ -4,6 +4,13 @@
 
 A manuscript for *<<journal>>*, article type **<<article_type>>**, written in LaTeX (LuaLaTeX).
 
+## Start here
+
+1. Write in `main.tex`. Authors, institutions, funding and disclosures go in `title_page.tex`.
+2. Every change you save to GitHub builds the PDFs again. To get them: **Actions**, the newest **Build** run, **Artifacts**, **pdf-manuscript**.
+3. What the journal asks of this article type is in the table below. The same limits stand as comments in `main.tex`, where they apply.
+4. To write in Overleaf or on your own computer, see **Build** below.
+
 ## What the journal asks of this article type
 
 As read on <<read_date>>, in plain words. These are not the journal's own words, and nobody has compared them with the live page: **check the journal's instructions before you submit**: <<<instructions_url>>>

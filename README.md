@@ -1,13 +1,40 @@
 <!-- rsna-template: the template's own README. scripts/configure.py replaces this file with the README of your manuscript. -->
 # RSNA manuscript template (LaTeX)
 
+Start a manuscript for an RSNA journal in a few minutes: you choose the journal and the article type, and you get a LaTeX manuscript with that journal's headings, word limits and title pages already in place. A community template, not made or endorsed by the RSNA.
+
+## Quick start
+
+You need a GitHub account. Nothing has to be installed.
+
+1. At the top of this page press the green **Use this template** button, then **Create a new repository**. Give it a name, choose **Private**, and press **Create repository**.
+2. In your new repository open the **Actions** tab and choose **Configure manuscript** in the list on the left.
+3. Press **Run workflow** on the right and fill in the form:
+   - **Journal**: for example `Radiology: Artificial Intelligence`
+   - **Article type**: for example `Original Research`
+   - **Title of the manuscript**, and a short description
+
+   Then press the green **Run workflow** button under the form.
+4. Wait a few minutes until the run shows a green tick. Your repository now holds your manuscript: `main.tex` (the text, with that journal's headings and word limits written in), `title_page.tex` (authors, funding, disclosures) and a `README.md` that lists what the journal asks of that article type.
+5. To get the PDF, click the finished run and download **pdf-manuscript** under **Artifacts**, at the bottom of its page.
+
+**From then on:** write in `main.tex`. Every change you save to GitHub builds the PDF again: **Actions**, the newest **Build** run, **Artifacts**, **pdf-manuscript**.
+
+**If the run ends with a red cross:** the journal you chose does not take that article type (the list shows the types of all six journals together). Click the run: it lists the types that journal takes. Run it again with one of them. Nothing was written.
+
+**To write in Overleaf instead:** do steps 1 to 4 first, then follow [In Overleaf](#3-in-overleaf) below. Set Overleaf's compiler to **LuaLaTeX**.
+
+**Before you submit:** the limits in this template were read second-hand. Check them against the journal's own instructions.
+
+## What it is
+
 A LaTeX template for manuscripts sent to the journals of the Radiological Society of North America (RSNA): Radiology, Radiology: Artificial Intelligence, Radiology: Cardiothoracic Imaging, Radiology: Imaging Cancer, RadioGraphics and Radiology Advances. You choose a journal and an article type, and one step rewrites the files into the skeleton that journal asks of that article type: the items of the title page, the abstract in the right form, the headings of the body with their word limits, the statements, and the full title page as a file of its own.
 
 **This is a community template. It is not made, checked or endorsed by the RSNA.** The limits in it are what could be read of the journals' instructions on the date given below, and nobody has compared them with the live pages. **Before you submit, open the journal's own instructions and check every limit that matters to you.**
 
 It is compiled with LuaLaTeX. The figures and tables go to the end, the pages carry no numbers, the text is double spaced in an 11-point Times font, and the references follow the journals' numbered style.
 
-## Use it
+## The three ways to use it, in detail
 
 ### 1. On GitHub
 
