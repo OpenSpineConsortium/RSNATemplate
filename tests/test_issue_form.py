@@ -189,6 +189,54 @@ def test_a_pair_that_does_not_go_together_is_refused_with_the_types_of_the_journ
     assert list(tmp_path.iterdir()) == [], "a refusal writes nothing"
 
 
+def test_a_type_the_journal_takes_under_another_name_is_used_and_said(tmp_path):
+    """Not every pair outside the journal's list is refused: a name another journal gives
+    the same kind of article is read as the journal's own name (scripts/configure.py,
+    find_type). The help says so, with an example that holds, and the answer names the
+    type used."""
+    # the example the help gives
+    radiology = configure.find_journal(DATA, "Radiology")
+    assert "Review" not in [atype["name"] for atype in radiology["article_types"]]
+    assert configure.find_type(DATA, radiology, "Review")["name"] == "Review articles"
+    assert issue_form.OTHER_NAME_EXAMPLE == "for example Review, which Radiology calls Review articles"
+    values, reply = check(issue(**dict(GOOD, journal="Radiology", article_type="Review")), tmp_path)
+    assert reply is None and values["article_type"] == "Review articles"
+    done = issue_form.done_reply(DATA, values["journal"], values["article_type"], "", "", SERVER, REPOSITORY, "1")
+    assert "*Radiology*, article type **Review articles**." in done, "the answer names the type used"
+    # every pair outside a journal's list is either used under the journal's own name for
+    # the same kind, or refused with the journal's types, and nothing is written
+    used, refused = 0, 0
+    for journal in DATA["journals"]:
+        own = [atype["name"] for atype in journal["article_types"]]
+        for name in configure.type_names(DATA):
+            if name in own:
+                continue
+            values, reply = check(issue(**dict(GOOD, journal=journal["name"], article_type=name)), tmp_path)
+            if values:
+                kinds = set(atype["key"] for other in DATA["journals"] for atype in other["article_types"] if atype["name"] == name)
+                atype = configure.find_type(DATA, journal, values["article_type"])
+                assert atype["name"] in own and atype["key"] in kinds, (journal["name"], name)
+                used += 1
+            else:
+                assert reply.startswith("**Nothing was written.**") and all(type_name in reply for type_name in own)
+                refused += 1
+    assert used and refused and list(tmp_path.iterdir()) == []
+    # said in each place that tells what happens to a pair: the form, the setup issue,
+    # the README (both ways) and the workflow's own list
+    form = configure.read(FORM)
+    help_text = re.findall(r"(?m)^      description: (.+)$", form.split("\n    id: article_type\n", 1)[1])[0]
+    setup = issue_form.setup_body(SERVER, REPOSITORY)
+    readme = configure.read(REPO / "README.md")
+    for text in (help_text, setup):
+        assert issue_form.OTHER_NAME_EXAMPLE in text and "own name is used" in text and "says which type was used" in text
+        assert "does not take the type at all" in text or "does not take that article type at all" in text
+        assert "nothing is written" in text
+    assert readme.count(issue_form.OTHER_NAME_EXAMPLE) == 3
+    assert "it uses the journal's own name and says so" in readme
+    assert "does not take the type you choose, the answer" not in form
+    assert "is read as this journal's name" in configure.read(WORKFLOWS / "configure.yml")
+
+
 def test_every_other_wrong_answer_is_refused_and_says_why(tmp_path):
     cases = {
         "journal": ("Journal of Nothing", ['Unknown journal "Journal of Nothing". The journals are:'] + configure.journal_names(DATA)),

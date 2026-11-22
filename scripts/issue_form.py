@@ -61,6 +61,10 @@ HEADING = re.compile(r"^###[ \t]+(.+?)[ \t]*#*[ \t]*$")
 # organization's owner with admin permission CONTRIBUTOR (seen in a trial, 2026-11-22).
 PERMISSIONS = ("admin", "write")
 ARTIFACT = "pdf-manuscript"
+# A type the journal takes under another name is not refused: scripts/configure.py uses
+# the journal's own name (find_type), and the answer names the type used. The example
+# the setup issue, the form and the README give (a test checks it against the data):
+OTHER_NAME_EXAMPLE = "for example Review, which Radiology calls Review articles"
 
 
 # ---------------------------------------------------------------------------- reading
@@ -267,8 +271,10 @@ def setup_body(server, repository):
         "saves them here, builds the first PDF, answers on your issue with a link to the PDF, and closes it. "
         "It closes this issue too.",
         "",
-        "If the journal you chose does not take that article type, the answer lists the types it takes. "
-        "Edit your issue to choose one of them, and the run starts again.",
+        "If you choose a type your journal takes under another name (%s), "
+        "the journal's own name is used, and the answer says which type was used. "
+        "If the journal does not take that article type at all, the answer lists the types it takes, and nothing is written. "
+        "Edit your issue to choose one of them, and the run starts again." % OTHER_NAME_EXAMPLE,
         "",
         "Only a person who can write to this repository can configure it.",
         "",

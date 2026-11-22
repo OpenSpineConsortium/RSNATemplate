@@ -14,7 +14,7 @@ At the top of this page press the green **Use this template** button, then **Cre
 1. Within a minute your new repository opens an issue by itself, **Set up this manuscript** (the **Issues** tab). Open it and press its link **Open the form**. (The same form: **Issues**, **New issue**, **Configure the manuscript**.)
 2. In the form choose the **Journal** and the **Article type** from the two lists, type the **Title of the manuscript** and, if you like, a short description. Press the green button at the bottom to create the issue.
 3. Wait a few minutes. A run writes your manuscript: `main.tex` (the text, with that journal's headings and word limits written in), `title_page.tex` (authors, funding, disclosures) and a `README.md` that lists what the journal asks of that article type. It builds the first PDF, answers on the issue with links to the new files and to the PDF (**pdf-manuscript**), and closes the issue.
-4. If the journal does not take the article type you chose, the answer lists the types it takes, and nothing is written. Edit the issue to choose one of them: the run starts again by itself.
+4. If you choose a type your journal takes under another name (for example Review, which Radiology calls Review articles), the journal's own name is used, and the answer says which type was used. If the journal does not take the article type at all, the answer lists the types it takes, and nothing is written. Edit the issue to choose one of them: the run starts again by itself.
 
 Only a person who can write to the repository can configure it.
 
@@ -30,7 +30,7 @@ Only a person who can write to the repository can configure it.
 3. Wait a few minutes until the run shows a green tick. Your repository now holds your manuscript, the same three files.
 4. To get the PDF, click the finished run and download **pdf-manuscript** under **Artifacts**, at the bottom of its page.
 
-**If that run ends with a red cross:** the journal you chose does not take that article type (the list shows the types of all six journals together). Click the run: it lists the types that journal takes. Run it again with one of them. Nothing was written.
+**If that run ends with a red cross:** the journal you chose does not take that article type (the list shows the types of all six journals together). Click the run: it lists the types that journal takes. Run it again with one of them. Nothing was written. A type your journal takes under another name (for example Review, which Radiology calls Review articles) is not refused: the run uses the journal's own name, and its page says which type it used.
 
 ### Then
 
@@ -54,13 +54,13 @@ It is compiled with LuaLaTeX. The figures and tables go to the end, the pages ca
 
 1. On the front page of this repository press **Use this template**, then **Create a new repository**. A manuscript usually wants a private repository. The new repository builds once by itself (one small run of **Build**, the skeleton as it came), and opens one issue, **Set up this manuscript**, with the link to the form; you need not wait for the build.
 2. Fill in the form **Configure the manuscript** (the link in that issue, or **Issues**, **New issue**): the journal and the article type from two lists, the title, and a short description. Or, in the new repository, open **Actions**, choose **Configure manuscript** in the list on the left, press **Run workflow**, fill in the same four, and press **Run workflow**. Both run the same steps.
-3. The run rewrites `main.tex`, `title_page.tex` and `README.md` for that journal and article type, commits them, and builds the first PDFs. From the form, the run answers on the issue with links to the commit and the PDFs, closes it, and closes the setup issue too; if the journal does not take the type, it answers with the types it takes and writes nothing, and editing the issue starts it again. From Actions, open the run and download the PDFs under **Artifacts**.
+3. The run rewrites `main.tex`, `title_page.tex` and `README.md` for that journal and article type, commits them, and builds the first PDFs. From the form, the run answers on the issue with links to the commit and the PDFs, closes it, and closes the setup issue too; if the journal takes the type under another name, it uses the journal's own name and says so; if the journal does not take the type at all, it answers with the types it takes and writes nothing, and editing the issue starts it again. From Actions, open the run and download the PDFs under **Artifacts**.
 
 After that, every push builds the PDFs again (Actions, the latest run of **Build**).
 
 The same run keeps an HTML copy of the manuscript, for the journals that take the text as a Word file: download the artifact `word-manuscript`, unpack it, open `main.html` in Microsoft Word and save it as a Word document. The copy is made by lwarp, as in the template this one descends from. It carries the text, the tables, the references and the list of abbreviations. How Word shows it has not been checked here: read it through before you upload it.
 
-The article type must be one the journal takes. The list holds the names of all six journals together; if the journal you chose does not take the type you chose, the run stops, and its page lists the types that journal takes. Nothing is written in that case.
+The article type must be one the journal takes. The list holds the names of all six journals together. A name that another journal gives to a type your journal also takes is read as your journal's own name (for example Review, which Radiology calls Review articles), and the run says which type it used. If the journal you chose does not take the type at all, the run stops, and its page lists the types that journal takes. Nothing is written in that case.
 
 ### 2. On a laptop, with one command
 

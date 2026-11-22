@@ -43,7 +43,7 @@ on:
           - "Radiology Advances"
           # END journals
       article_type:
-        description: Article type (if the journal does not take it, the run stops and lists what it takes)
+        description: Article type (a name another journal gives a type this journal also takes is read as this journal's name; a type it does not take at all stops the run, which lists what it takes)
         required: true
         type: choice
         default: "Original Research"
