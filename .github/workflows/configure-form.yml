@@ -5,10 +5,12 @@
 #
 #   1. "Read the form": scripts/issue_form.py reads the answers and checks them the way
 #      scripts/configure.py does, writing nothing. Only a person who can write to this
-#      repository may configure it (the issue's author: their association with the
-#      repository and their permission on it). If the journal does not take the article
-#      type, or anything else is wrong, it answers on the issue with the reason, and the
-#      run ends there: nothing is written.
+#      repository may configure it: the issue's author, with admin or write permission as
+#      GitHub's API gives it. (The issue's author_association is written to the log, and
+#      not trusted: in a private repository GitHub's event has named an organization's
+#      owner CONTRIBUTOR.) If the journal does not take the article type, or anything else
+#      is wrong, it answers on the issue with the reason, and the run ends there: nothing
+#      is written.
 #   2. "Configure": the same steps as Actions, "Configure manuscript", Run workflow: this
 #      job calls configure.yml, which writes the files, commits them as the Actions bot and
 #      builds the first PDF in the same run (a commit made by a workflow starts no other

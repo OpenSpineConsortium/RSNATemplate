@@ -37,8 +37,8 @@ def issue(**given):
     return "\n\n".join(parts)
 
 
-def check(body, tmp_path, association="OWNER", permission="admin"):
-    return issue_form.check(DATA, tmp_path, body, association, permission, SERVER, REPOSITORY)
+def check(body, tmp_path, permission="admin"):
+    return issue_form.check(DATA, tmp_path, body, permission, SERVER, REPOSITORY)
 
 
 def run(*arguments, **environment):
@@ -191,17 +191,16 @@ def test_every_other_wrong_answer_is_refused_and_says_why(tmp_path):
 
 
 def test_only_a_person_who_can_write_may_configure(tmp_path):
-    allowed = [("OWNER", "admin"), ("MEMBER", "admin"), ("MEMBER", "write"), ("COLLABORATOR", "write"), ("owner", "ADMIN")]
-    refused = [("NONE", "none"), ("CONTRIBUTOR", "write"), ("FIRST_TIME_CONTRIBUTOR", "read"), ("FIRST_TIMER", "none"),
-               ("MANNEQUIN", "none"), ("MEMBER", "read"), ("COLLABORATOR", "read"), ("OWNER", "none"), ("", ""), (None, None)]
-    for association, permission in allowed:
-        values, reply = check(issue(**GOOD), tmp_path, association, permission)
-        assert values == GOOD and reply is None, (association, permission)
-    for association, permission in refused:
-        values, reply = check(issue(**GOOD), tmp_path, association, permission)
-        assert values is None and reply == issue_form.NOT_ALLOWED, (association, permission)
+    # the permission GitHub's API gives (maintain shows as write, triage as read); what
+    # the issue's author_association says is not asked
+    for permission in ("admin", "write", "ADMIN", " write\n"):
+        values, reply = check(issue(**GOOD), tmp_path, permission)
+        assert values == GOOD and reply is None, permission
+    for permission in ("read", "none", "triage", "maintain-ish", "", None):
+        values, reply = check(issue(**GOOD), tmp_path, permission)
+        assert values is None and reply == issue_form.NOT_ALLOWED, permission
     # the answer to a stranger says nothing of what was typed
-    values, reply = check(issue(**dict(GOOD, article_type="Radiology Diagnosis Please")), tmp_path, "NONE", "read")
+    values, reply = check(issue(**dict(GOOD, article_type="Radiology Diagnosis Please")), tmp_path, "read")
     assert reply == issue_form.NOT_ALLOWED
     assert "Only a person who can write to this repository can configure it" in reply and "nothing was done" in reply
 
@@ -230,7 +229,7 @@ def test_what_was_typed_cannot_reach_a_command_or_become_a_link(tmp_path):
     reply_file = tmp_path / "reply.md"
     title = "A title\ngo=false\r\njournal=Radiology\u2028article_type=Review"
     result = run("read", "--reply", str(reply_file), "--root", str(tmp_path / "empty"),
-                 RSNA_ISSUE_BODY=issue(**dict(GOOD, title=title)), RSNA_ASSOCIATION="OWNER", RSNA_PERMISSION="admin",
+                 RSNA_ISSUE_BODY=issue(**dict(GOOD, title=title)), RSNA_ASSOCIATION="CONTRIBUTOR", RSNA_PERMISSION="admin",
                  GITHUB_OUTPUT=str(out))
     assert result.returncode == 0, result.stderr
     lines = out.read_text(encoding="utf-8").split("\n")
@@ -245,7 +244,7 @@ def test_the_command_says_go_or_writes_the_answer(tmp_path):
     out, reply_file = tmp_path / "output.txt", tmp_path / "reply.md"
     root = tmp_path / "copy"
     root.mkdir()
-    environment = dict(RSNA_ASSOCIATION="MEMBER", RSNA_PERMISSION="write", GITHUB_OUTPUT=str(out),
+    environment = dict(RSNA_ASSOCIATION="CONTRIBUTOR", RSNA_PERMISSION="write", GITHUB_OUTPUT=str(out),
                        GITHUB_SERVER_URL=SERVER, GITHUB_REPOSITORY=REPOSITORY)
     result = run("read", "--reply", str(reply_file), "--root", str(root),
                  RSNA_ISSUE_BODY=issue(**dict(GOOD, article_type="Radiology Diagnosis Please")), **environment)

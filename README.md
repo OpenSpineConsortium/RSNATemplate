@@ -13,7 +13,7 @@ At the top of this page press the green **Use this template** button, then **Cre
 
 1. Within a minute your new repository opens an issue by itself, **Set up this manuscript** (the **Issues** tab). Open it and press its link **Open the form**. (The same form: **Issues**, **New issue**, **Configure the manuscript**.)
 2. In the form choose the **Journal** and the **Article type** from the two lists, type the **Title of the manuscript** and, if you like, a short description. Press the green button at the bottom to create the issue.
-3. Wait a few minutes. A run writes your manuscript, builds the first PDF, answers on the issue with links to both, and closes the issue: `main.tex` (the text, with that journal's headings and word limits written in), `title_page.tex` (authors, funding, disclosures) and a `README.md` that lists what the journal asks of that article type.
+3. Wait a few minutes. A run writes your manuscript: `main.tex` (the text, with that journal's headings and word limits written in), `title_page.tex` (authors, funding, disclosures) and a `README.md` that lists what the journal asks of that article type. It builds the first PDF, answers on the issue with links to the new files and to the PDF (**pdf-manuscript**), and closes the issue.
 4. If the journal does not take the article type you chose, the answer lists the types it takes, and nothing is written. Edit the issue to choose one of them: the run starts again by itself.
 
 Only a person who can write to the repository can configure it.

@@ -7,9 +7,9 @@ opens an issue whose text holds the answers, each under a heading of its questio
 way GitHub writes them. The workflow .github/workflows/configure-form.yml runs this:
 
     python3 scripts/issue_form.py read --reply FILE
-        reads the issue's text (RSNA_ISSUE_BODY) and who wrote it (RSNA_ASSOCIATION, the
-        author's association with the repository, and RSNA_PERMISSION, their permission on
-        it); checks the choice the way scripts/configure.py does, writing nothing; then
+        reads the issue's text (RSNA_ISSUE_BODY) and the permission of its author on the
+        repository (RSNA_PERMISSION); checks the choice the way scripts/configure.py does,
+        writing nothing; then
         writes go=true and the four answers to GITHUB_OUTPUT, or go=false and, in FILE, the
         answer to post on the issue
     python3 scripts/issue_form.py done       the answer once the manuscript is written
@@ -51,11 +51,11 @@ QUESTIONS = (
 # What GitHub writes for a question left empty.
 NO_RESPONSE = "_No response_"
 HEADING = re.compile(r"^###[ \t]+(.+?)[ \t]*#*[ \t]*$")
-# Who may configure: the author's association with the repository (the issue's
-# author_association) and their permission on it (the "permission" of GitHub's
-# collaborator permission, where maintain counts as write). An organization's member may
-# only read some of its repositories, so the permission is asked as well.
-ASSOCIATIONS = ("OWNER", "MEMBER", "COLLABORATOR")
+# Who may configure: a person whose permission on the repository is admin or write (the
+# "permission" GitHub's API gives for a collaborator, where maintain shows as write). The
+# issue's author_association is not enough, either way: an organization's member may only
+# read some of its repositories, and in a private repository GitHub's event has named an
+# organization's owner with admin permission CONTRIBUTOR (seen in a trial, 2026-11-22).
 PERMISSIONS = ("admin", "write")
 ARTIFACT = "pdf-manuscript"
 
@@ -92,8 +92,8 @@ def is_form(body):
     return "Journal" in labels and "Article type" in labels
 
 
-def may_configure(association, permission):
-    return (association or "").strip().upper() in ASSOCIATIONS and (permission or "").strip().lower() in PERMISSIONS
+def may_configure(permission):
+    return (permission or "").strip().lower() in PERMISSIONS
 
 
 # ---------------------------------------------------------------------------- what is said
@@ -137,9 +137,9 @@ def refused_reply(refusal, server, repository, hint=True):
     return "\n\n".join(parts)
 
 
-def check(data, root, body, association, permission, server="https://github.com", repository=""):
+def check(data, root, body, permission, server="https://github.com", repository=""):
     """What to configure, or what to say instead: (answers, None) or (None, reply)."""
-    if not may_configure(association, permission):
+    if not may_configure(permission):
         return None, NOT_ALLOWED
     given = answers(body)
     try:
@@ -306,7 +306,7 @@ def main(argv=None):
             write_outputs({"go": "false"}, env)
             print("This issue does not hold the form's answers: nothing to do.")
             return 0
-        values, reply = check(data, args.root, body, env.get("RSNA_ASSOCIATION"), env.get("RSNA_PERMISSION"), server, repository)
+        values, reply = check(data, args.root, body, env.get("RSNA_PERMISSION"), server, repository)
         if values is None:
             write_outputs({"go": "false"}, env)
             if args.reply:
