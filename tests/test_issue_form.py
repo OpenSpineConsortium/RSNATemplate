@@ -287,6 +287,95 @@ def test_an_edit_is_acted_on_only_when_the_text_changed(tmp_path):
     assert issue_form.unchanged(None, "x") and issue_form.unchanged("a\r\nb", "a\nb\n") and not issue_form.unchanged("a", "b")
 
 
+def issue_now(tmp_path, body, name="issue-now.json"):
+    """The issue as GitHub's API gives it when the run starts (the fields the script reads)."""
+    path = tmp_path / name
+    path.write_text(json.dumps(dict(number=5, title="Configure the manuscript", state="open", body=body)), encoding="utf-8")
+    return path
+
+
+def test_the_text_the_issue_holds_when_the_run_starts_is_the_one_read(tmp_path):
+    out, reply_file = tmp_path / "output.txt", tmp_path / "reply.md"
+    root = tmp_path / "copy"
+    root.mkdir()
+    first = issue(**dict(GOOD, journal="Radiology Advances", article_type="Original Research"))
+    last = issue(**dict(GOOD, journal="Radiology Advances", article_type="Review", title="The second title"))
+    environment = dict(RSNA_PERMISSION="admin", GITHUB_OUTPUT=str(out))
+    # the event carried the first text; the author edited it again while the run waited
+    result = run("read", "--reply", str(reply_file), "--root", str(root), "--now", str(issue_now(tmp_path, last)),
+                 RSNA_ISSUE_BODY=first, RSNA_ACTION="edited", RSNA_PREVIOUS_BODY=issue(**GOOD), **environment)
+    assert result.returncode == 0, result.stderr
+    assert outputs(out) == dict(go="true", journal="Radiology Advances", article_type="Review",
+                                title="The second title", description=GOOD["description"])
+    assert "edited again" in result.stdout and not reply_file.exists()
+    out.unlink()
+    # the same text, with other line ends: read as usual
+    result = run("read", "--reply", str(reply_file), "--root", str(root),
+                 "--now", str(issue_now(tmp_path, first.replace("\n", "\r\n"))), RSNA_ISSUE_BODY=first, **environment)
+    assert outputs(out)["article_type"] == "Original Research" and "edited again" not in result.stdout
+    out.unlink()
+    # the text no longer holds the form: nothing to do, nothing said
+    result = run("read", "--reply", str(reply_file), "--root", str(root),
+                 "--now", str(issue_now(tmp_path, "Never mind.")), RSNA_ISSUE_BODY=first, **environment)
+    assert outputs(out) == {"go": "false"} and not reply_file.exists() and "no longer holds" in result.stdout
+    out.unlink()
+    # GitHub could not be asked: nothing is done, and the answer says how to try again
+    for broken in (tmp_path / "missing.json", tmp_path / "broken.json", tmp_path / "message.json"):
+        if broken.name == "broken.json":
+            broken.write_text("{not json", encoding="utf-8")
+        if broken.name == "message.json":
+            broken.write_text(json.dumps({"message": "Not Found"}), encoding="utf-8")
+        result = run("read", "--reply", str(reply_file), "--root", str(root), "--now", str(broken),
+                     RSNA_ISSUE_BODY=first, **environment)
+        assert result.returncode == 0 and outputs(out) == {"go": "false"}, broken.name
+        assert reply_file.read_text(encoding="utf-8") == issue_form.NOT_READ + "\n"
+        out.unlink()
+        reply_file.unlink()
+    # a stranger is still told no, whatever the text holds now
+    result = run("read", "--reply", str(reply_file), "--root", str(root), "--now", str(issue_now(tmp_path, last)),
+                 RSNA_ISSUE_BODY=first, **dict(environment, RSNA_PERMISSION="read"))
+    assert outputs(out) == {"go": "false"} and reply_file.read_text(encoding="utf-8") == issue_form.NOT_ALLOWED + "\n"
+    assert list(root.iterdir()) == []
+
+
+def test_an_edit_made_while_runs_wait_is_never_lost(tmp_path):
+    """What the check found (copy1 #5): text edit A, text edit B and an edit of the title
+    alone, while a run was going on. Now no run is cancelled, and in whatever order GitHub
+    starts the three, every run that configures writes B: the last text."""
+    import itertools
+    root = tmp_path / "copy"
+    root.mkdir()
+    opened = issue(**dict(GOOD, journal="Radiology Advances", article_type="Art of Imaging"))
+    text_a = issue(**dict(GOOD, journal="Radiology Advances", article_type="Original Research"))
+    text_b = issue(**dict(GOOD, journal="Radiology Advances", article_type="Review", title="A new title"))
+    events = {
+        "A": dict(RSNA_ISSUE_BODY=text_a, RSNA_ACTION="edited", RSNA_PREVIOUS_BODY=opened),
+        "B": dict(RSNA_ISSUE_BODY=text_b, RSNA_ACTION="edited", RSNA_PREVIOUS_BODY=text_a),
+        # GitHub's event for an edit of the title alone: an empty previous text
+        "C": dict(RSNA_ISSUE_BODY=text_b, RSNA_ACTION="edited", RSNA_PREVIOUS_BODY=""),
+    }
+    now = issue_now(tmp_path, text_b)
+    for order in itertools.permutations("ABC"):
+        configured = []
+        for name in order:
+            out = tmp_path / ("output-%s.txt" % name)
+            result = run("read", "--root", str(root), "--now", str(now), RSNA_PERMISSION="admin",
+                         GITHUB_OUTPUT=str(out), **events[name])
+            assert result.returncode == 0, result.stderr
+            values = outputs(out)
+            out.unlink()
+            if values["go"] == "true":
+                configured.append((values["article_type"], values["title"]))
+        assert configured and set(configured) == {("Review", "A new title")}, order
+    # the workflow: no waiting run is cancelled, and the run reads the issue as it is now
+    text = configure.read(WORKFLOWS / "configure-form.yml")
+    block = text.split("\nconcurrency:\n", 1)[1].split("\n\n", 1)[0]
+    assert re.findall(r"(?m)^  (\S+): (.+)$", block)[1:] == [("cancel-in-progress", "false"), ("queue", "max")]
+    step = job(text, "check")
+    assert 'gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE}" > "$now"' in step
+    assert 'python3 scripts/issue_form.py read --reply "$reply" --now "$now"' in step
+
+
 # ---------------------------------------------------------------------------- what is said
 
 

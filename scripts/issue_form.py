@@ -6,11 +6,13 @@ link to the form (.github/ISSUE_TEMPLATE/configure-manuscript.yml). Submitting t
 opens an issue whose text holds the answers, each under a heading of its question, the
 way GitHub writes them. The workflow .github/workflows/configure-form.yml runs this:
 
-    python3 scripts/issue_form.py read --reply FILE
+    python3 scripts/issue_form.py read --reply FILE [--now ISSUE]
         reads the issue's text (RSNA_ISSUE_BODY; on an edit, RSNA_ACTION=edited and the
         text before it, RSNA_PREVIOUS_BODY) and the permission of its author on the
-        repository (RSNA_PERMISSION); checks the choice the way scripts/configure.py does,
-        writing nothing; then
+        repository (RSNA_PERMISSION); with --now, the answers are read from the text the
+        issue holds when the run starts (ISSUE: the issue as GitHub's API gives it, JSON),
+        which is newer when the author edited it again while the run waited its turn;
+        checks the choice the way scripts/configure.py does, writing nothing; then
         writes go=true and the four answers to GITHUB_OUTPUT, or go=false and, in FILE, the
         answer to post on the issue
     python3 scripts/issue_form.py done       the answer once the manuscript is written
@@ -93,13 +95,31 @@ def is_form(body):
     return "Journal" in labels and "Article type" in labels
 
 
+def same_text(one, other):
+    """Are two texts of an issue the same, whatever the line ends and the blank lines at
+    either end?"""
+    normal = lambda text: (text or "").replace("\r\n", "\n").strip()  # noqa: E731
+    return normal(one) == normal(other)
+
+
 def unchanged(previous, body):
     """Is an edited issue's text what it was? Only an edit of the text is acted on: GitHub's
     event for an edit of the title alone carries an empty previous text."""
     if not previous:
         return True
-    normal = lambda text: text.replace("\r\n", "\n").strip()  # noqa: E731
-    return normal(previous) == normal(body or "")
+    return same_text(previous, body)
+
+
+def text_now(path):
+    """The text the issue holds now, from the issue as GitHub's API gives it (a JSON file);
+    None when the file is missing or is not an issue."""
+    try:
+        issue = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(issue, dict) or "number" not in issue:
+        return None
+    return issue.get("body") or ""
 
 
 def may_configure(permission):
@@ -124,6 +144,11 @@ NOT_ALLOWED = (
     "so nothing was done.\n\n"
     "If this is your manuscript, ask the repository's owner to give you write access "
     "(**Settings**, **Collaborators**), or to fill in the form."
+)
+
+NOT_READ = (
+    "The run could not read the text of this issue from GitHub just now, so nothing was done.\n\n"
+    "To try again, edit this issue (any change to its text) and save: the run starts again by itself."
 )
 
 
@@ -299,6 +324,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Read the form \"Configure the manuscript\" and word the answers.")
     parser.add_argument("command", choices=["read", "done", "failed", "setup", "setup-title", "setup-open", "setup-done"])
     parser.add_argument("--reply", help="read: where to write the answer when nothing is configured")
+    parser.add_argument("--now", help="read: the issue as GitHub's API gives it when the run starts (JSON); its text is read")
     parser.add_argument("--issues", help="setup, setup-open: the repository's issues, one JSON object a line")
     parser.add_argument("--issue", help="setup-done: the number of the form's issue")
     parser.add_argument("--root", default=str(configure.REPO), help="the repository (default: this one)")
@@ -320,6 +346,24 @@ def main(argv=None):
             write_outputs({"go": "false"}, env)
             print("The issue was edited, but not its text: nothing to do.")
             return 0
+        if args.now:
+            # The runs of the form wait their turn, one at a time; by the time this one
+            # starts, the author may have edited the issue again. The text it holds now is
+            # the one to configure: whichever run reads it, the last text is the one written.
+            now = text_now(args.now)
+            if now is None:
+                write_outputs({"go": "false"}, env)
+                if args.reply:
+                    Path(args.reply).write_text(NOT_READ + "\n", encoding="utf-8")
+                print(NOT_READ)
+                return 0
+            if not same_text(now, body):
+                print("The issue's text was edited again after this run was started: the text it holds now is read.")
+                body = now
+            if not is_form(body):
+                write_outputs({"go": "false"}, env)
+                print("The issue's text no longer holds the form's answers: nothing to do.")
+                return 0
         values, reply = check(data, args.root, body, env.get("RSNA_PERMISSION"), server, repository)
         if values is None:
             write_outputs({"go": "false"}, env)

@@ -22,6 +22,14 @@
 # In the template itself (its template switch is on) nothing runs: the job is skipped.
 # The issue's text is untrusted: it reaches the script in an environment variable and is
 # never pasted into a command line.
+#
+# An edit made while a run is going on is never lost. The runs wait their turn, one at a
+# time, and no waiting run is cancelled (concurrency below, "queue: max": up to 100 may
+# wait). GitHub starts them in about the order they began to wait, but does not promise
+# it, so a run does not trust the text its event carried: "Read the form" reads the text
+# the issue holds when the run starts. Whichever run reads last reads the last text, and
+# that text is the one written and answered. (Two runs may then answer on the same text:
+# the second finds nothing new to save and says so.)
 name: Configure from the form
 
 on:
@@ -34,6 +42,7 @@ permissions: {}
 concurrency:
   group: configure-form-${{ github.event.issue.number }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   check:
@@ -88,7 +97,14 @@ jobs:
           RSNA_PERMISSION="$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${RSNA_AUTHOR}/permission" --jq '.permission' 2>/dev/null || echo none)"
           export RSNA_PERMISSION
           echo "The author's association: ${RSNA_ASSOCIATION}; permission: ${RSNA_PERMISSION}"
-          python3 scripts/issue_form.py read --reply "$reply"
+          # the issue as it is now: its text may have been edited again while this run waited
+          now="$RUNNER_TEMP/issue-now.json"
+          for attempt in 1 2 3; do
+            if gh api "repos/${GITHUB_REPOSITORY}/issues/${ISSUE}" > "$now"; then break; fi
+            rm -f "$now"
+            sleep 10
+          done
+          python3 scripts/issue_form.py read --reply "$reply" --now "$now"
           if [ -s "$reply" ]; then
             gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file "$reply"
             cat "$reply" >> "$GITHUB_STEP_SUMMARY"
