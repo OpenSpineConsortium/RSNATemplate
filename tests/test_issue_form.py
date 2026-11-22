@@ -263,6 +263,28 @@ def test_the_command_says_go_or_writes_the_answer(tmp_path):
     # an issue that is not the form's: nothing to say
     result = run("read", "--reply", str(reply_file), "--root", str(root), RSNA_ISSUE_BODY="A note to myself.", **environment)
     assert result.returncode == 0 and outputs(out) == {"go": "false"} and not reply_file.exists()
+    out.unlink()
+
+
+def test_an_edit_is_acted_on_only_when_the_text_changed(tmp_path):
+    out, reply_file = tmp_path / "output.txt", tmp_path / "reply.md"
+    root = tmp_path / "copy"
+    root.mkdir()
+    bad = issue(**dict(GOOD, article_type="Radiology Diagnosis Please"))
+    environment = dict(RSNA_PERMISSION="admin", GITHUB_OUTPUT=str(out), RSNA_ACTION="edited")
+    # the title alone was edited: GitHub's event carries an empty previous text (seen in a
+    # trial), or the same text; nothing is said a second time
+    for previous in ("", bad, bad.replace("\n", "\r\n") + "\n"):
+        result = run("read", "--reply", str(reply_file), "--root", str(root), RSNA_ISSUE_BODY=bad,
+                     RSNA_PREVIOUS_BODY=previous, **environment)
+        assert result.returncode == 0 and outputs(out) == {"go": "false"} and not reply_file.exists(), repr(previous)
+        assert "not its text" in result.stdout
+        out.unlink()
+    # the text was edited: the new answers are read
+    result = run("read", "--reply", str(reply_file), "--root", str(root), RSNA_ISSUE_BODY=issue(**GOOD),
+                 RSNA_PREVIOUS_BODY=bad, **environment)
+    assert outputs(out)["go"] == "true" and not reply_file.exists()
+    assert issue_form.unchanged(None, "x") and issue_form.unchanged("a\r\nb", "a\nb\n") and not issue_form.unchanged("a", "b")
 
 
 # ---------------------------------------------------------------------------- what is said
@@ -329,7 +351,7 @@ def test_the_form_workflow_runs_the_configure_steps_and_is_safe():
                       "github.event.issue.state == 'open'",
                       "contains(github.event.issue.body, '### Journal')",
                       "contains(github.event.issue.body, '### Article type')",
-                      "(github.event.action == 'opened' || github.event.changes.body != null)"):
+                      "(github.event.action == 'opened' || github.event.changes.body.from != '')"):
         assert re.search(r"\n      (&& )?%s\n" % re.escape(condition), check_job.split("runs-on:")[0]), condition
     # the least each job needs
     permissions = {name: re.findall(r"(?m)^    permissions:\n((?:      .*\n)+)", job(text, name)) for name in ("check", "configure", "answer")}

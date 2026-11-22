@@ -39,14 +39,17 @@ jobs:
   check:
     name: Read the form
     # Not in the template; only an open issue that holds the form's two drop-downs; on an
-    # edit, only when the text changed (a new title alone changes nothing).
+    # edit, only when the text was edited. (GitHub's event for an edit of the title alone
+    # still carries changes.body, with an empty "from": seen in a trial, 2026-11-22. An
+    # edit that leaves the text as it was is let through by this test and ended by the
+    # script, which compares the two texts exactly.)
     if: >-
       github.event.repository.is_template == false
       && github.repository != 'OpenSpineConsortium/RSNATemplate'
       && github.event.issue.state == 'open'
       && contains(github.event.issue.body, '### Journal')
       && contains(github.event.issue.body, '### Article type')
-      && (github.event.action == 'opened' || github.event.changes.body != null)
+      && (github.event.action == 'opened' || github.event.changes.body.from != '')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -70,6 +73,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
           RSNA_ISSUE_BODY: ${{ github.event.issue.body }}
+          RSNA_ACTION: ${{ github.event.action }}
+          RSNA_PREVIOUS_BODY: ${{ github.event.changes.body.from }}
           RSNA_AUTHOR: ${{ github.event.issue.user.login }}
           RSNA_ASSOCIATION: ${{ github.event.issue.author_association }}
         run: |

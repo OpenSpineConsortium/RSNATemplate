@@ -7,7 +7,8 @@ opens an issue whose text holds the answers, each under a heading of its questio
 way GitHub writes them. The workflow .github/workflows/configure-form.yml runs this:
 
     python3 scripts/issue_form.py read --reply FILE
-        reads the issue's text (RSNA_ISSUE_BODY) and the permission of its author on the
+        reads the issue's text (RSNA_ISSUE_BODY; on an edit, RSNA_ACTION=edited and the
+        text before it, RSNA_PREVIOUS_BODY) and the permission of its author on the
         repository (RSNA_PERMISSION); checks the choice the way scripts/configure.py does,
         writing nothing; then
         writes go=true and the four answers to GITHUB_OUTPUT, or go=false and, in FILE, the
@@ -90,6 +91,15 @@ def is_form(body):
     names = [HEADING.match(line) for line in (body or "").replace("\r\n", "\n").split("\n")]
     labels = set(match.group(1) for match in names if match)
     return "Journal" in labels and "Article type" in labels
+
+
+def unchanged(previous, body):
+    """Is an edited issue's text what it was? Only an edit of the text is acted on: GitHub's
+    event for an edit of the title alone carries an empty previous text."""
+    if not previous:
+        return True
+    normal = lambda text: text.replace("\r\n", "\n").strip()  # noqa: E731
+    return normal(previous) == normal(body or "")
 
 
 def may_configure(permission):
@@ -305,6 +315,10 @@ def main(argv=None):
         if not is_form(body):
             write_outputs({"go": "false"}, env)
             print("This issue does not hold the form's answers: nothing to do.")
+            return 0
+        if env.get("RSNA_ACTION") == "edited" and unchanged(env.get("RSNA_PREVIOUS_BODY"), body):
+            write_outputs({"go": "false"}, env)
+            print("The issue was edited, but not its text: nothing to do.")
             return 0
         values, reply = check(data, args.root, body, env.get("RSNA_PERMISSION"), server, repository)
         if values is None:
